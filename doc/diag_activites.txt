@@ -1,0 +1,41 @@
+@startuml
+' à coller ici pour visualiser : https://www.plantuml.com/plantuml/uml/SyfFKj2rKt3CoKnELR1Io4ZDoSa70000
+' doc : https://plantuml.com/fr/use-case-diagram
+
+
+start
+:Afficher la liste des options disponibles;
+:Utilisateur fait un choix;
+
+switch ("Type de choix ?") 
+case (Créer un QR Code)
+  :Choix couleurs/logo;
+  :Affichage du QR Code créé;
+  stop
+
+case (Créer un QR Code suivi)
+  :Identification requise;
+  while (Identifiants valides ?) is (Non)
+    :Identifiants invalides;
+  endwhile (Oui)
+  :Choix couleurs/logo;
+  :Affichage du QR Code suivi;
+  stop
+
+case (Consulter la statistique du QR Code)
+  :Identification requise;
+  while (Identifiants valides ?) is (Non)
+    :Identifiants invalides;
+  endwhile (Oui)
+  :Choix du Qrcode;
+  :Affichage de la statistique;
+  stop
+@enduml
+
+@startuml
+start
+: Scanne le Qrcode;
+: Mise à jour des statistiques du Qrcode;
+: API renvoie vers le texte/lien;
+stop
+@enduml

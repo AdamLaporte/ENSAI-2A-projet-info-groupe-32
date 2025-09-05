@@ -1,3 +1,4 @@
+
 import qrcode
 
 qr = qrcode.QRCode(

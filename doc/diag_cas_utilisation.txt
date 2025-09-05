@@ -6,23 +6,29 @@
 left to right direction
 
 actor "Utilisateur"      as user
-actor "Administrateur"   as admin
-actor "Joueur"           as joueur
+actor "Utilisateur externe"   as extern
 
 rectangle {
-  usecase "S'inscrire"        as inscription
-  usecase "S'authentifier"    as authentification
-  usecase "Quitter"           as quitter
-  usecase "Lister joueurs"    as lister_joueurs
+  usecase "Créer un Qrcode"        as Qrcode
+  usecase "Créer un Qrcode suivi"  as Qrcode_suivi
+  usecase "Consulter la statistique du Qrcode" as Qrcode_stat
+  usecase "Scanne le Qrcode"       as Qrcode_scan
+  usecase "S'authentifier"         as Auth
+  usecase "Choix couleur/logo" as Qrcode_pimp
+  usecase "Mise à jour de la statistique" as Qrcode_maj
+
 }
 
-joueur --> quitter
+user --> Qrcode
+user --> Qrcode_suivi
+user --> Qrcode_stat
 
-user --> inscription
-user --> authentification
-user --> quitter
+extern --> Qrcode_scan
+Qrcode_suivi --> Qrcode_pimp
+Qrcode --> Qrcode_pimp
 
-admin --> quitter
-admin --> lister_joueurs
+Qrcode_suivi ..> Auth : <<inclut>>
+Qrcode_stat ..> Auth : <<inclut>>
 
+Qrcode_scan ..> Qrcode_maj : <<inclut>>
 @enduml
