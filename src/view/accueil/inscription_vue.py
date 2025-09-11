@@ -1,5 +1,3 @@
-import os
-
 import regex
 from InquirerPy import inquirer
 from InquirerPy.validator import EmptyInputValidator, PasswordValidator
@@ -22,7 +20,7 @@ class InscriptionVue(VueAbstraite):
         mdp = inquirer.secret(
             message="Entrez votre mot de passe : ",
             validate=PasswordValidator(
-                length=os.environ["PASSWORD_LENGTH"],
+                length=35,
                 cap=True,
                 number=True,
                 message="Au moins 35 caractères, incluant une majuscule et un chiffre",
