@@ -77,11 +77,23 @@ classDiagram
         +afficher(int): list[list]
     }
 
-    class VueAbstraite{
-      +afficher()
-      +choisir_menu()
+    class Token {
+        +id_user: int
+        +token: int
     }
 
+    class TokenService {
+        +creer_token(int,int): Token
+        +verif_token(Token): bool
+
+    }
+
+    class TokenDao {
+        +creer_token(Token): bool
+        +get_id(Token): int
+        +get_token(int): Token
+
+    }
 
     UtilisateurService --|> UtilisateurDao : appelle
     UtilisateurService --|> Utilisateur: utilise
@@ -91,6 +103,9 @@ classDiagram
 
     QrcodeService --|> QrcodeDao : appelle
     QrcodeService --|> Qrcode : utilise
+
+    TokenService --|> TokenDao : appelle
+    TokenService --|> Token : utilise
 
 
 
