@@ -16,39 +16,65 @@ Pour afficher ce diagramme dans VScode :
 
 ```mermaid
 classDiagram
-    class Joueur {
-        +id_joueur: int
+    class Utilisateur {
+        +id_user: int
         +pseudo: string
         +mdp: string
-        +age: int
-        +mail: string
-        +fan_pokemon: bool
     }
     
-    class JoueurDao {
-        +creer(Joueur): bool
-        +trouver_par_id(int): Joueur
-        +lister_tous(): list[Joueur]
-        +supprimer(Joueur): bool
-        +se_connecter(str,str): Joueur
+    class UtilisateurDao {
+        +creer(Utilisateur): bool
+        +trouver_par_id(int): Utilisateur
+        +supprimer(Utilisateur): bool
+        +se_connecter(str,str): Utilisateur
     }
     
-    class JoueurService {
-        +creer(str...): Joueur
-        +trouver_par_id(int): Joueur
-        +lister_tous(): list[Joueur]
-        +afficher_tous(): str
-        +supprimer(Joueur): bool
-        +se_connecter(str,str): Joueur
+    class UtilisateurService {
+        +creer(str, str): Utilisateur
+        +trouver_par_id(int): Utilisateur
+        +supprimer(Utilisateur): bool
+        +se_connecter(str,str): Utilisateur
     }
 
-    class AccueilVue {
+    class Qrcode {
+        +id_qrcode: int
+        +url: str
+        +id_propriétaire: int
+        +date_création: date
+        +type: bool
+        +couleur: str
+        +logo: str
     }
     
-    class ConnexionVue {
+    class QrcodeDao {
+        +creer_Qr(Qrcode): bool
+        +trouver_Qr_par_id(int): list[Qrcode]
+        +supprimer(Qrcode): bool
+    }
+    
+    class QrcodeService {
+        +creer_Qr(str, int, str, str): Qrcode
+        +trouver_Qr_par_id(int): list[Qrcode]
+        +supprimer(Qrcode): bool
     }
 
-    class MenuJoueurVue {
+    class Statistique {
+        +id_qrcode: int
+        +nombre_vue: str
+        +date_des_vues: list[date]
+    }
+    
+    class StatistiqueDao {
+        +creer_Statistique(Statistique): bool
+        +modifier_Statistique(int): bool
+        +afficher(int): list[list]
+
+    }
+    
+    class StatistiqueService {
+        +creer_Statistique(int): Statistique
+        +modifier_Statistique(int): bool
+        +afficher(int): list[list]
     }
 
     class VueAbstraite{
@@ -58,10 +84,11 @@ classDiagram
 
     VueAbstraite <|-- AccueilVue
     VueAbstraite <|-- ConnexionVue
-    VueAbstraite <|-- MenuJoueurVue
-    MenuJoueurVue ..> JoueurService : appelle
-    ConnexionVue ..> JoueurService : appelle
-    JoueurService ..> JoueurDao : appelle
-    Joueur <.. JoueurService: utilise
-    Joueur <.. JoueurDao: utilise
+    VueAbstraite <|-- MenuUtilisateurVue
+    UtilisateurService ..> UtilisateurDao : appelle
+    Utilisateur <.. UtilisateurService: utilise
+    Utilisateur <.. UtilisateurDao: utilise
+
+
+
 ```
