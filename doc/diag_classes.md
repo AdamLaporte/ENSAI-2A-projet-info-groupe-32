@@ -82,12 +82,15 @@ classDiagram
       +choisir_menu()
     }
 
-    VueAbstraite <|-- AccueilVue
-    VueAbstraite <|-- ConnexionVue
-    VueAbstraite <|-- MenuUtilisateurVue
-    UtilisateurService ..> UtilisateurDao : appelle
-    Utilisateur <.. UtilisateurService: utilise
-    Utilisateur <.. UtilisateurDao: utilise
+
+    UtilisateurService --|> UtilisateurDao : appelle
+    UtilisateurService --|> Utilisateur: utilise
+
+    StatistiqueService --|> StatistiqueDao : appelle
+    StatistiqueService --|> Statistique: utilise
+
+    QrcodeService --|> QrcodeDao : appelle
+    QrcodeService --|> Qrcode : utilise
 
 
 
