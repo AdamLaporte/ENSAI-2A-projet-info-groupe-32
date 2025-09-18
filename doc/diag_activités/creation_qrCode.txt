@@ -1,0 +1,31 @@
+** DIAGRAMME D'ACTIVITE DE CREATION D'UN Qrcode
+
+Pour visualiser le diagramme, il suffit de coller le code ci-dessous dans:
+ https://www.planttext.com/ qui est un PlantText est un éditeur en ligne rapide et gratuit  permettant de créer des diagrammes UML 
+à partir de code PlantUML.
+
+
+@startuml
+
+start
+:Demande de création de QR code(tocken,
+contenu, expiry_date, type,usage_limit);
+
+
+:Vérifier le token de l'utilisateur?;
+if (Token valide ?) then (oui)
+  :Générer le QR code;
+  :Enregistrer le QR code 
+  :Retourner le QR code à l'utilisateur;
+else (non)
+  :Renvoyer message d'erreur ou invitation à créer un compte;
+endif
+
+
+stop
+
+@enduml
+
+pour voir directement l'image, il suffit de cliquer sur: 
+https://uml.planttext.com/plantuml/png/LP0nRiCm34Lt0Re3jzY0Jv0CoT2YSuEWQo3OT4fKfWo9CkhRTFKvVB5ITfO06aJzpuUlVqdYekJ1MsFDThVc-8Q3umv1JnlNnGa5BiFd5ThGOIMX_K5kh6a32t9k07z7YlEzSu8Do3nYavDxuDtJG5AV2bovN-iIgIUCu14aAADG_I4BUKgwc-DPlTH3TTlKoNbInxa6-TQn2fbgQm2E7-l22jj9prYdJNddY0zAygh1fbrHGexyggn_hmaKWpuXL1ouVgxn56RT6Z2LNq5tm1ZL2Y43yKIoDwIaKfSQCojx6ALaGkwetmj84aPhBlgo5VuF
+

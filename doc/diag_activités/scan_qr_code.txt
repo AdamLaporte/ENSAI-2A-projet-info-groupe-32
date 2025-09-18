@@ -1,0 +1,29 @@
+** DIAGRAMME D'ACTIVITE DE SCAN D'UN Qrcode
+Pour visualiser le diagramme, il suffit de coller le code ci-dessous dans:
+ https://www.planttext.com/ qui est un PlantText est un éditeur en ligne rapide et gratuit  permettant de créer des diagrammes UML 
+à partir de code PlantUML.
+
+@startuml
+
+start
+:Scanner le QR code;
+
+
+:Reception du scan avec l'ID du QR code;
+
+if (QR code est valide ?) then (Oui)
+  :Créer un enregistrement Scan (date, IP, etc.);
+  :Mettre à jour le compteur de scans du QR code;
+  :Rediriger l'utilisateur vers l'URL cible;
+else (Non)
+  :Retourner une erreur ("QR code invalide ou expiré");
+endif
+
+stop
+@enduml
+
+pour voir directement l'image, il suffit de cliquer sur:
+https://uml.planttext.com/plantuml/png/LL3BQiCm4BmR_0z3Bh4Xz0EIGmFj9T2dIpz0bJV95baoqihqSthjT-J7kd9TQ6-pkpFCpEwJc2XvS7LLLpEkg-sBDTvJX2CyTx2XfrqvwwKZIwDmyEWpaj9W9h9mwyDjsVnbyn7DCeEIO3AE5Lwta3DvD8-Psxe2jZVnygLcsODyf1CdYJIG5vGOQ7eZjC7XQGCIUzNkPiqzYR9m-SHxo7DG6uPHIB5wb63fVnxLTDHpv5FfjSx2ZfEP1HF5fAlNxWwMtrnXaqk4vY7uTb6AklWvf9Q9iSYQrMyxzakta44V8skVLSb9lkVZpr_3M5TxdUT7VmC0
+
+
+
