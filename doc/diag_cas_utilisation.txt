@@ -2,6 +2,8 @@
 ' à coller ici pour visualiser : https://www.plantuml.com/plantuml/uml/SyfFKj2rKt3CoKnELR1Io4ZDoSa70000
 ' doc : https://plantuml.com/fr/use-case-diagram
 
+' lien pour obtenir le diag déjà compilé : https://www.plantuml.com/plantuml/png/VP9DZXCn48NtFaMfDxEQD3z8ID4e6ZI0X08BYDYmGPQxabJajfjorMGGuYviESTS33izaMn-i9Ie_Vm-rwlglavYMNJqvWBkVu2BtYC3EO8fAiCj9RMUKjQMi1UPqhBlZyVZOl8s56pXujYVDttvRRvkNwyFJtWjJs_YEhnw--7nc_ZiqykuiSyVvPKB3T5LrpLNRRdNX9VEvh-1x8xjQ8pnk1MG24oxlS10Z4ue1cEiayZGVHJobAoWSWUdPHDeGlwB0V1Ea0DsislU6LEkj67d4RuPA6o90DqDt_z41WtmdbqS2dKkyA3ypmr9wPQwoltvf3HC34czPCnRI6A5aj0NHHZqNBF6iw6cDyw6WE2npLSJsT4G5rPbZq5eIpYFwqoyo0TDj7saEt1HFIhtFkvY7MMYSQhTxoXX-OOEKHa6_AsTcXpjmPZlncIKuV9ozQ1N-sfMbLgDmCplhUXDepLP3fkmy_CVSWij5glJ8609LrSKd5TPhKnL-nyEKyKebghPrdYDOT3H_m80
+
 
 left to right direction
 
