@@ -22,6 +22,7 @@ classDiagram
         +mdp: string
     }
     
+
     class UtilisateurDao {
         +creer(Utilisateur): bool
         +trouver_par_id(int): Utilisateur
