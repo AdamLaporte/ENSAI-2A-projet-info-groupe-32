@@ -1,0 +1,61 @@
+Pour visualiser le diagramme, il suffit de coller le code ci-dessous dans:
+ https://www.planttext.com/ qui est un PlantText est un éditeur en ligne rapide et gratuit  permettant de créer des diagrammes UML 
+à partir de code PlantUML.
+
+
+@startuml
+actor Client
+
+participant "AuthenticationService" as AuthService
+participant "TokenService" as TokenService
+
+participant "Metier_Utilisateur" as MetierUser
+participant "Metier_Token" as MetierToken
+
+participant "UserDAO" as UserDAO
+participant "TokenDAO" as TokenDAO
+
+database "BDD" as BaseDeDonnees
+
+Client ->> AuthService : submitLogin(username, password)
+AuthService ->> MetierUser : verifyUser(username, password)
+MetierUser ->> UserDAO : findUserByUsername(username)
+UserDAO ->> BaseDeDonnees : SELECT * FROM users WHERE username=?
+BaseDeDonnees -->> UserDAO : User (ou null)
+UserDAO -->> MetierUser : User (ou null)
+
+alt utilisateur trouvé
+    MetierUser ->> MetierUser : checkPassword(password, user.passwordHash)
+    alt mot de passe correct
+        MetierUser -->> AuthService : userVerified
+        AuthService ->> TokenService : requestToken(user)
+        TokenService ->> MetierToken : getTokenForUser(user)
+        MetierToken ->> TokenDAO : findTokenByUser(user)
+        TokenDAO ->> BaseDeDonnees : SELECT token FROM tokens WHERE user=?
+        BaseDeDonnees -->> TokenDAO : token (ou null)
+        TokenDAO -->> MetierToken : token (ou null)
+
+        alt token existant et valide
+            MetierToken -->> TokenService : existingToken
+        else token absent ou invalide
+            MetierToken ->> MetierToken : createNewToken(user)
+            MetierToken ->> TokenDAO : saveToken(newToken)
+            TokenDAO ->> BaseDeDonnees : INSERT INTO tokens VALUES(newToken)
+            BaseDeDonnees -->> TokenDAO : newTokenSaved
+            TokenDAO -->> MetierToken : newToken
+        end
+
+        MetierToken -->> TokenService : token
+        TokenService -->> AuthService : token
+    else mot de passe incorrect
+        MetierUser -->> AuthService : authenticationFailed
+    end
+else utilisateur non trouvé
+    MetierUser -->> AuthService : authenticationFailed
+end
+
+AuthService -->> Client : token (si authentifié) ou erreur
+@enduml
+
+pour voir directement l'image, il suffit de cliquer sur: 
+https://uml.planttext.com/plantuml/png/bLNRRjem6BwFb7Umk8AfxGDCMbSeGQr4oyIXkvnCyWDMWyryeEiZzJdwOhETEB6J01itvBU_x_kFjk-4n5ogVHv7E9MCe_kS09Ln54S7lK5ISi1KejvGoPrU9ocMXD45y2D9eOUmG6Qdj1kS9Nk50Eelj3myWIJ0VwqaoOd04XItd69v9O1tuwscXxHsIzpmnyEPnPNVNS4wY3ECJeObNcC1g3SQZ-tkI5jZ63DA0OI153L3rxUtVZNGLoJKUa_ab6q9xIljbk8zNA435kADyMmGHpxSqEjiDVi8d6pUZT5Dzi26M-QbYHj2CsEDBDdmAW5DSpZ32LBHp4KoJUwNw0kQp6TFo904-lcGp1Fa1BvzZwEGTHqwj_7qcK9KvRdlhfLV4wb7C9T8rGE096Vg-FaHHqZ_6ka6KkaEqjSVPMdwhaPNDkeRPpvWiHiKMiRHdacKWIqee9Hn3gaiTflUseqrkY-cFGIocjFifZ_lciJXjm8XxQfjoA2c1j0wFRkigLieQ1F6gtaOD8Cjm9NZUXQiENhlObR8CzCWhQwT2FlfZuGP1wVLCHPU88MAr-vs2EsyMwIQPbfORCCVecynVG11eYFEIGOrgbMTZhvOFg7RykfmDCZrN1GUy5gO0wx38FIYXrOIAGSzpi_mrjdv2_qJ-0W5ZvO23UxP3Zu-BvBvKlyjPwvtByFfAbcSKZlVGqTQwA2oKs6q2-1eNcrfvlVoKeTao0uFI_jqUd3RnE2a4_gVPnq7Jzy4azpbRhEm7lnBYp9w-kBwL_coGC6DOhZbKrET344gWGtv_1YO6GMTdjBFvPqMiI_xNm00
