@@ -1,0 +1,27 @@
+'Pour visualiser les diagrammes, il suffit de coller le code ci-dessous dans:
+' https://www.planttext.com/ qui est un PlantText est un éditeur en ligne rapide et gratuit  permettant de créer des diagrammes UML à partir de code PlantUML.
+
+** DIAGRAMME D'ACTIVITE DE CREATION D'UN Qrcode
+
+@startuml
+
+start
+:Demande de création de QR code(tocken,
+contenu, expiry_date, type,usage_limit);
+
+
+:Vérifier le token de l'utilisateur?;
+if (Token valide ?) then (oui)
+  :Générer le QR code;
+  :Enregistrer le QR code;
+  :Retourner le QR code à l'utilisateur;
+else (non)
+  :Renvoyer message d'erreur ou invitation à créer un compte;
+endif
+
+
+stop
+@enduml
+
+' pour voir directement l'image, il faut cliquer sur: 
+' https://www.planttext.com?text=RLB9Sk984BqJmJ_K3Ri338Z5DdteaH6cnMR00ZTz8Sge91MKgkHQnF8rVVLty6EJ4ap4U68kYifycI-VycLfAen4ALK6Cwg8H8mev5CSIXp7H9KHPKYP8A0Q-GHj16Dv3Rooa5PyefGmq8AvwXGB9HHfdQXEjRhVx-yIXhdMvA3lDYAkeWz34L4Q6Owc6U81ya_Y_EbJJK0AuOZHa1CaSK9X1j48j6W30b12P4oqXjPSZ3n_WXZ_Ys2q68_G-GzAiDHKNZJ39vy7q5sn02A_VKEEQ_VdzdZSGqx9xdhkqlNWsKFTUS_st9S9f1SJD9DPTzRpbzB0Q6AM1VcxMEWu9COSsAzYiAQ2Py5ida-zqMAp8xnSB6m4ruIRCYA7XChZsiUQb94-9gHi50x9cj6Owjll6JdmBi-VaWRqicajW2DZPIMZAPY4iptzW5eQe1ilHrCm3of-t28TGNWZ3Bqj5X3gzC-V7CWkJ5TPttEanoK9gTB_Xys9XglWNv1igLyKG2bXYg0RBlZjjOsduWXTu4FsLyWl4IapKuL1bATKNpO4J5Vlm7YuZ4HdSmdtQN1PWD8YWPL3vhhm4ahoCnMPfLIIZIOnWIjW9Hh3eFnA0smqsZ3wOO1O6Tb1_pv78FhFEUOHfAi93wkZQOtFQJTkD4UwDYUDxMbL6wIrhl2irQlflSr4uyLh1iFWJJnsTz7SUnwcowUMwmKljJOUd1ApOCiFVqLsW_fOFJjUjDnK7cOD4wVr0MSJtiUj9_hijxoe_-AEVws7hLtKnWrBF-vgzwVx5UkTNis38nfyXLFdO1mzwBVifVKkqac5kg6xw9fw4zksqr-xpQV5CDnlAiwKUJyRdiU6OlBkyWDkLxmPjuBtS1PRlViAiwpjzZ6HAtymyVrLxMGVmwWUlCkVVN8uXY5VHp4UlYNcrwWkp38yy5PxxhL_MwF9Hql7zTyZQzLi78UkSFOk7WQliwxO7jhs2FTtUwBZxKCJJwCd5ehMqZp_3G00
