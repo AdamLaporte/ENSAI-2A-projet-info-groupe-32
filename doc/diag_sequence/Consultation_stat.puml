@@ -1,0 +1,53 @@
+@startuml
+
+/' 
+-------------------------------------------------------------------
+  NOTICE D’UTILISATION DANS VSCODE 
+
+  1. Installer Java et Graphviz dans ton environnement :
+     - Ouvre un terminal puis tape :
+         sudo apt update
+         sudo apt install -y default-jre graphviz
+
+  2. Dans VSCode :
+     - Installer l’extension "PlantUML"
+
+  3. Exécution :
+     - Ouvrir ce fichier .puml dans VSCode
+     - Appuyer sur ALT + D pour générer et prévisualiser le diagramme
+------------------------------------------------------------------- 
+'/
+
+actor Utilisateur
+
+Utilisateur -> StatistiqueService : afficher_statistiques(qr:Qrcode, token:Token)
+
+StatistiqueService -> TokenService : verifier_token(token:Token)
+TokenService -> TokenDao : get_token_by_value(token:string)
+TokenDao --> TokenService : Token | null
+TokenService --> StatistiqueService : bool
+
+alt Token valide
+    StatistiqueService -> TokenService : get_user_id_id_by_token(token:Token)
+    TokenService -> TokenDao : get_user_id_by_token(token:string)
+    TokenDao --> TokenService : id_user:int
+    TokenService --> StatistiqueService : id_user:int
+
+    StatistiqueService -> QrcodeDao : trouver_par_id(id_qrcode:int)
+    QrcodeDao --> StatistiqueService : Qrcode
+
+    StatistiqueService -> QrcodeService : verifier_proprietaire(qr:Qrcode, id_user:int)
+    QrcodeService --> StatistiqueService : bool
+
+    alt Qrcode appartient à l’utilisateur
+        StatistiqueService -> StatistiqueDao : afficher(id_qrcode:int)
+        StatistiqueDao --> StatistiqueService : List<Statistique>
+        StatistiqueService --> Utilisateur : Statistiques du Qrcode
+    else Qrcode n’appartient pas à l’utilisateur
+        StatistiqueService --> Utilisateur : Erreur (Accès interdit)
+    end
+else Token invalide
+    StatistiqueService --> Utilisateur : Erreur (Token invalide ou expiré)
+end
+
+@enduml

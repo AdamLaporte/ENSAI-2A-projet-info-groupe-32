@@ -1,0 +1,71 @@
+@startuml
+
+/' 
+-------------------------------------------------------------------
+  NOTICE D’UTILISATION DANS VSCODE 
+
+  1. Installer Java et Graphviz dans ton environnement :
+     - Ouvre un terminal puis tape :
+         sudo apt update
+         sudo apt install -y default-jre graphviz
+
+  2. Dans VSCode :
+     - Installer l’extension "PlantUML"
+
+  3. Exécution :
+     - Ouvrir ce fichier .puml dans VSCode
+     - Appuyer sur ALT + D pour générer et prévisualiser le diagramme
+------------------------------------------------------------------- 
+'/
+
+title Séquence de création d'un tocken
+actor Client
+
+participant "UtilisateurService" as UserService
+participant "UtilisateurDao" as UserDAO
+participant "TokenService" as TokenService
+participant "TokenDao" as TokenDAO
+participant "Token" as Token
+database "BaseDeDonnees" as BDD
+
+Client ->> UserService: login(pseudo, mdp)
+UserService ->> UserDAO: trouver_par_pseudo(pseudo)
+UserDAO ->> BDD: SELECT * FROM Utilisateur WHERE pseudo=?
+BDD -->> UserDAO: Utilisateur (ou null)
+UserDAO -->> UserService: Utilisateur (ou null)
+
+alt utilisateur trouvé et valide
+    UserService ->> TokenService: creer_token(utilisateur)
+
+    TokenService ->> TokenDAO: get_token_by_user(utilisateur.id_user)
+    TokenDAO ->> BDD: SELECT * FROM Token WHERE id_user=?
+    BDD -->> TokenDAO: token (ou null)
+    TokenDAO -->> TokenService: token (ou null)
+
+    alt token existant
+        TokenService ->> Token: verifier_token(token)
+        Token -->> TokenService: valide / invalide
+
+        alt token valide
+            TokenService -->> UserService: token existant
+        else token invalide
+            TokenService ->> TokenDAO: creer_token(utilisateur)
+            TokenDAO ->> BDD: INSERT INTO Token VALUES(newToken)
+            BDD -->> TokenDAO: ok
+            TokenDAO -->> TokenService: newToken
+            TokenService -->> UserService: newToken
+        end
+    else pas de token
+        TokenService ->> TokenDAO: creer_token(utilisateur)
+        TokenDAO ->> BDD: INSERT INTO Token VALUES(newToken)
+        BDD -->> TokenDAO: ok
+        TokenDAO -->> TokenService: newToken
+        TokenService -->> UserService: newToken
+    end
+
+else utilisateur non trouvé
+    UserService -->> Client: erreur (utilisateur inexistant ou mdp incorrect)
+end
+
+UserService -->> Client: token ou erreur
+@enduml

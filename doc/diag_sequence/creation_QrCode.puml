@@ -1,0 +1,59 @@
+
+@startuml
+
+/' 
+-------------------------------------------------------------------
+  NOTICE D’UTILISATION DANS VSCODE 
+
+  1. Installer Java et Graphviz dans ton environnement :
+     - Ouvre un terminal puis tape :
+         sudo apt update
+         sudo apt install -y default-jre graphviz
+
+  2. Dans VSCode :
+     - Installer l’extension "PlantUML"
+
+  3. Exécution :
+     - Ouvrir ce fichier .puml dans VSCode
+     - Appuyer sur ALT + D pour générer et prévisualiser le diagramme
+------------------------------------------------------------------- 
+'/
+
+actor Client
+
+participant "QrcodeService" as QrService
+participant "TokenService" as TokenService
+participant "TokenDao" as TokenDAO
+participant "QrcodeDao" as QrDAO
+database "BaseDeDonnees" as BDD
+
+Client ->> QrService: creer_qr(url, type, couleur, logo, token)
+
+' Vérification existence du token
+QrService ->> TokenService: existe_token(token)
+TokenService ->> TokenDAO: trouver_token_par_valeur(token)
+TokenDAO ->> BDD: SELECT * FROM Token WHERE token=?
+BDD -->> TokenDAO: Token (ou null)
+TokenDAO -->> TokenService: Token (ou null)
+TokenService -->> QrService: true/false
+
+alt token inexistant
+    QrService -->> Client: erreur ("Token inexistant")
+else token existant
+    ' Vérification validité du token
+    QrService ->> TokenService: est_valide_token(token)
+    TokenService ->> TokenService: checkValidité(token)
+    TokenService -->> QrService: true/false
+
+    alt token invalide
+        QrService -->> Client: erreur ("Token invalide")
+    else token valide
+        ' Création du QRCode
+        QrService ->> QrDAO: creer_qr(url, type, couleur, logo, user)
+        QrDAO ->> BDD: INSERT INTO Qrcode (...)
+        BDD -->> QrDAO: ok
+        QrDAO -->> QrService: Qrcode
+        QrService -->> Client: Qrcode créé
+    end
+end
+@enduml
