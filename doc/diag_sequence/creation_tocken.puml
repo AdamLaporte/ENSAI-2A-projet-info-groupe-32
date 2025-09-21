@@ -4,7 +4,7 @@
 -------------------------------------------------------------------
   NOTICE D’UTILISATION DANS VSCODE 
 
-  1. Installer Java et Graphviz dans ton environnement :
+  1. Installer Java et Graphviz dans l' environnement :
      - Ouvre un terminal puis tape :
          sudo apt update
          sudo apt install -y default-jre graphviz

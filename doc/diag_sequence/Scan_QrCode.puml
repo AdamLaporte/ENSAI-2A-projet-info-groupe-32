@@ -1,0 +1,49 @@
+@startuml
+
+/' 
+-------------------------------------------------------------------
+  NOTICE D’UTILISATION DANS VSCODE 
+
+  1. Installer Java et Graphviz dans l' environnement :
+     - Ouvre un terminal puis tape :
+         sudo apt update
+         sudo apt install -y default-jre graphviz
+
+  2. Dans VSCode :
+     - Installer l’extension "PlantUML"
+
+  3. Exécution :
+     - Ouvrir ce fichier .puml dans VSCode
+     - Appuyer sur ALT + D pour générer et prévisualiser le diagramme
+------------------------------------------------------------------- 
+'/
+
+title Séquence lors du scan d’un QR code suivi
+
+actor ClientExterne as Client
+
+participant "QRCodeService" as QrService
+participant "QRCodeDao" as QrDAO
+participant "StatistiqueService" as StatService
+participant "StatistiqueDao" as StatDAO
+database "BaseDeDonnees" as BDD
+
+Client ->> QrService: scan_qr(id_qrcode)
+QrService ->> QrDAO: trouver_par_id(id_qrcode)
+QrDAO ->> BDD: SELECT * FROM Qrcode WHERE id_qrcode=?
+BDD -->> QrDAO: Qrcode (ou null)
+QrDAO -->> QrService: Qrcode (ou null)
+
+alt Qrcode trouvé
+    QrService ->> StatService: ajouter_vue(qrcode)
+    StatService ->> StatDAO: creer(Statistique)
+    StatDAO ->> BDD: INSERT INTO Statistique (id_qrcode, date_scan,adresse_ip)
+    BDD -->> StatDAO: ok
+    StatDAO -->> StatService: succès
+    StatService -->> QrService: succès
+    QrService -->> Client: redirection vers qrcode.url
+else Qrcode inexistant
+    QrService -->> Client: erreur ("QR code invalide")
+end
+
+@enduml
