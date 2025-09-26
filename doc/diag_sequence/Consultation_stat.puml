@@ -20,23 +20,23 @@
 
 actor Utilisateur
 
-Utilisateur -> StatistiqueService : afficher_statistiques(qr:Qrcode, token:Token)
+Utilisateur -> StatistiqueService : afficher(id_qrcode, token)
 
-StatistiqueService -> TokenService : verifier_token(token:Token)
-TokenService -> TokenDao : get_token_by_value(token:string)
+StatistiqueService -> TokenService : verifier_token(token)
+TokenService -> TokenDao : Trouver_token_par_valeur(token)
 TokenDao --> TokenService : Token | null
 TokenService --> StatistiqueService : bool
 
 alt Token valide
-    StatistiqueService -> TokenService : get_user_id_id_by_token(token:Token)
-    TokenService -> TokenDao : get_user_id_by_token(token:string)
-    TokenDao --> TokenService : id_user:int
-    TokenService --> StatistiqueService : id_user:int
+    StatistiqueService -> TokenService : Trouver_id_user_par_tocken(token)
+    TokenService -> TokenDao : Trouver_id_user_par_tocken(token)
+    TokenDao --> TokenService : id_user
+    TokenService --> StatistiqueService : id_user
 
-    StatistiqueService -> QrcodeDao : trouver_par_id(id_qrcode:int)
+    StatistiqueService -> QrcodeDao : trouver_par_id(id_qrcode)
     QrcodeDao --> StatistiqueService : Qrcode
 
-    StatistiqueService -> QrcodeService : verifier_proprietaire(qr:Qrcode, id_user:int)
+    StatistiqueService -> QrcodeService : verifier_proprietaire(id_qrcode, id_user:int)
     QrcodeService --> StatistiqueService : bool
 
     alt Qrcode appartient à l’utilisateur

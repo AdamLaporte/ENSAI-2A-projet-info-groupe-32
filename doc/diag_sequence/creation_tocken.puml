@@ -28,16 +28,16 @@ participant "TokenDao" as TokenDAO
 participant "Token" as Token
 database "BaseDeDonnees" as BDD
 
-Client ->> UserService: login(pseudo, mdp)
-UserService ->> UserDAO: trouver_par_pseudo(pseudo)
-UserDAO ->> BDD: SELECT * FROM Utilisateur WHERE pseudo=?
+Client ->> UserService: se_connecter(id_user, mdp)
+UserService ->> UserDAO: trouver_par_id_user(id_user)
+UserDAO ->> BDD: SELECT * FROM Utilisateur WHERE id_user=?
 BDD -->> UserDAO: Utilisateur (ou null)
 UserDAO -->> UserService: Utilisateur (ou null)
 
 alt utilisateur trouvé et valide
     UserService ->> TokenService: creer_token(utilisateur)
 
-    TokenService ->> TokenDAO: get_token_by_user(utilisateur.id_user)
+    TokenService ->> TokenDAO: trouver_token_par_id_user(utilisateur.id_user)
     TokenDAO ->> BDD: SELECT * FROM Token WHERE id_user=?
     BDD -->> TokenDAO: token (ou null)
     TokenDAO -->> TokenService: token (ou null)
@@ -50,17 +50,17 @@ alt utilisateur trouvé et valide
             TokenService -->> UserService: token existant
         else token invalide
             TokenService ->> TokenDAO: creer_token(utilisateur)
-            TokenDAO ->> BDD: INSERT INTO Token VALUES(newToken)
+            TokenDAO ->> BDD: INSERT INTO Token VALUES(nouveauToken)
             BDD -->> TokenDAO: ok
-            TokenDAO -->> TokenService: newToken
-            TokenService -->> UserService: newToken
+            TokenDAO -->> TokenService: nouveauToken
+            TokenService -->> UserService: nouveauToken
         end
     else pas de token
         TokenService ->> TokenDAO: creer_token(utilisateur)
-        TokenDAO ->> BDD: INSERT INTO Token VALUES(newToken)
+        TokenDAO ->> BDD: INSERT INTO Token VALUES(nouveauToken)
         BDD -->> TokenDAO: ok
-        TokenDAO -->> TokenService: newToken
-        TokenService -->> UserService: newToken
+        TokenDAO -->> TokenService: nouveauToken
+        TokenService -->> UserService: nouveauToken
     end
 
 else utilisateur non trouvé

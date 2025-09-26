@@ -42,7 +42,6 @@ alt token inexistant
 else token existant
     ' Vérification validité du token
     QrService ->> TokenService: est_valide_token(token)
-    TokenService ->> TokenService: checkValidité(token)
     TokenService -->> QrService: true/false
 
     alt token invalide

@@ -35,8 +35,8 @@ BDD -->> QrDAO: Qrcode (ou null)
 QrDAO -->> QrService: Qrcode (ou null)
 
 alt Qrcode trouvé
-    QrService ->> StatService: ajouter_vue(qrcode)
-    StatService ->> StatDAO: creer(Statistique)
+    QrService ->> StatService: creer_statistique(id_qrcode, date_scan,adresse_ip)
+    StatService ->> StatDAO: creer_statistique(id_qrcode, date_scan,adresse_ip)
     StatDAO ->> BDD: INSERT INTO Statistique (id_qrcode, date_scan,adresse_ip)
     BDD -->> StatDAO: ok
     StatDAO -->> StatService: succès
