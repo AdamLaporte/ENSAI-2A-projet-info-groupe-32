@@ -1,0 +1,30 @@
+classDiagram
+    QR Code "*" -- "1" Utilisateur
+    Utilisateur "1" -- "1" Token
+    QR Code "1" -- "1" Statistique
+
+    class Utilisateur {
+        + id_user : int 
+        + mdp : str
+    }
+
+    class QR Code {
+        +id_qrcode: int
+        +url: str
+        +id_propriétaire: int
+        +date_création: date
+        +type: bool
+        +couleur: str
+        +logo: str
+    }
+
+    class Statistique {
+        +id_qrcode: int
+        +nombre_vue: str
+        +date_des_vues: list[date]
+    }
+
+    class Token {
+        +id_user: int
+        +token: int
+    }
