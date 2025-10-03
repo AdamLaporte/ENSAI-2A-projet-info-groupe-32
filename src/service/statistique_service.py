@@ -16,25 +16,23 @@ class StatistiqueService:
         return nouvelle_statistique if StatistiqueDao().creer_statistique(nouvelle_statistique) else None
 
     @log
-    def lister_tous(self, inclure_mdp=False) -> list[Utilisateur]:
-        """Lister tous les utilisateurs
-        Si inclure_mdp=True, les mots de passe seront inclus
-        Par défaut, tous les mdp des utilisateurs sont à None
+    def lister_tous(self) -> list[Statistique]:
         """
-        utilisateurs = UtilisateurDao().lister_tous()
-        if not inclure_mdp:
-            for i in utilisateurs:
-                i.mdp = None
+        Lister toutes les statistiques
+        """
+        statistiques = StatistiqueDao().lister_tous()
         return utilisateurs
 
-    @log
-    def trouver_par_id_user(self, id_user) -> Utilisateur:
-        """Trouver un utilisateur à partir de son id_user"""
-        return UtilisateurDao().trouver_par_id_user(id_user)
+#à partir d'ici
+
+#    @log
+#    def trouver_par_id_user(self, id_user) -> Utilisateur:
+#        """Trouver un utilisateur à partir de son id_user"""
+#        return UtilisateurDao().trouver_par_id_user(id_user)
 
     @log
-    def modifier_user(self, utilisateur) -> Utilisateur:
-        """Modification d'un utilisateur"""
+    def modifier_statistique(self, statistique) -> Statistique:
+        """Modification d'une statistique"""
         utilisateur.mdp = hash_password(utilisateur.mdp, utilisateur.id_user)
         return utilisateur if UtilisateurDao().modifier_user(utilisateur) else None
 
