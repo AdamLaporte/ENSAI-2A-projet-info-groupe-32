@@ -1,19 +1,19 @@
 from utils.log_decorator import log
-from utils.securite import hash_password
-from business_object.utilisateur import Utilisateur
-from dao.utilisateur_dao import UtilisateurDao
+from business_object.statistique import Statistique
+from dao.statistique_dao import StatistiqueDao
 
-class UtilisateurService:
-    """Classe contenant les méthodes de service des Utilisateurs"""
+class StatistiqueService:
+    """Classe contenant les méthodes de service des Statistiques"""
     
     @log
-    def creer_user(self, id_user, mdp) -> Utilisateur:
-        """Création d'un utilisateur à partir de ses attributs"""
-        nouveau_utilisateur = Utilisateur(
-            id_user=id_user,
-            mdp=hash_password(mdp, id_user),
+    def creer_statistique(self, id_qrcode, nombre_vue, date_des_vues) -> Statistique:
+        """Création d'une statistique à partir de ses attributs"""
+        nouvelle_statistique = Statistique(
+            id_qrcode=id_qrcode,
+            nombre_vue=nombre_vue,
+            date_des_vues=date_des_vues
         )
-        return nouveau_utilisateur if UtilisateurDao().creer_user(nouveau_utilisateur) else None
+        return nouvelle_statistique if StatistiqueDao().creer_statistique(nouvelle_statistique) else None
 
     @log
     def lister_tous(self, inclure_mdp=False) -> list[Utilisateur]:
