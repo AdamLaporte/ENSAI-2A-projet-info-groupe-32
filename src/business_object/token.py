@@ -1,5 +1,6 @@
 from src.business_object.utilisateur.py import Utilisateur
 
+
 class Token:
     """
     Classe représentant un Token
@@ -10,17 +11,20 @@ class Token:
         jeton d'authentification (privé)
     _id_user : str
         identifiant du joueur lié à ce jeton (privé).
+    _expire_dans : 
+
     """
 
-    def __init__(self, token : str, id_user : str):
+    def __init__(self, token: str, utilisateur: Utilisateur, expire_dans):
         """Constructeur"""
         self._token = token
-        self._id_user = id_user
+        self._id_user = utilisateur.id_user
+        self._expire_dans = expire_dans
 
     @property
     def token(self):
         return self._token
-    
+ 
     @token.setter
     def token(self, value):
         if value is not None and not isinstance(value, str):
