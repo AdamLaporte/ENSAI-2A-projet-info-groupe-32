@@ -1,36 +1,27 @@
-class Joueur:
-    """
-    Classe représentant un Joueur
+from datetime import datetime
 
-    Attributs
-    ----------
-    id_joueur : int
-        identifiant
-    pseudo : str
-        pseudo du joueur
-    mdp : str
-        le mot de passe du joueur
-    age : int
-        age du joueur
-    mail : str
-        mail du joueur
-    fan_pokemon : bool
-        indique si le joueur est un fan de Pokemon
-    """
+class Qrcode:
+    def __init__(self, id_qrcode: int, url: str, id_proprietaire: str, 
+                 date_creation: datetime, type: bool, couleur: str, logo: str):
+        self.__id_qrcode = id_qrcode      # clé privée
+        self.__url = url
+        self.__id_proprietaire = id_proprietaire
+        self.__date_creation = date_creation
+        self.__type = type
+        self.__couleur = couleur
+        self.__logo = logo
 
-    def __init__(self, pseudo, age, mail, mdp=None, fan_pokemon=False, id_joueur=None):
-        """Constructeur"""
-        self.id_joueur = id_joueur
-        self.pseudo = pseudo
-        self.mdp = mdp
-        self.age = age
-        self.mail = mail
-        self.fan_pokemon = fan_pokemon
+    
+    def afficher_infos(self):
+        return f"QR {self.__id_qrcode} - {self.__url} ({self.__couleur})"
 
-    def __str__(self):
-        """Permet d'afficher les informations du joueur"""
-        return f"Joueur({self.pseudo}, {self.age} ans)"
+    # Getters
+    def get_id(self):
+        return self.__id_qrcode
 
-    def as_list(self) -> list[str]:
-        """Retourne les attributs du joueur dans une liste"""
-        return [self.pseudo, self.age, self.mail, self.fan_pokemon]
+    def get_url(self):
+        return self.__url
+
+    # Setters si nécessaire
+    def set_url(self, nouvelle_url: str):
+        self.__url = nouvelle_url
