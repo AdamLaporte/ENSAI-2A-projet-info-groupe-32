@@ -1,4 +1,3 @@
-
 from datetime import date 
 
 class Statistique:
@@ -73,15 +72,21 @@ class Statistique:
     def date_des_vues(self, value):
         if value is not None and not isinstance(value, list):
             raise ValueError("Les dates des vues doivent êtres stockées dans une liste")
+
+        for d in value:
+            if not isinstance(d, (date, datetime)):
+                raise ValueError(
+                    "Chaque élément de la liste doit être un objet de type date ou datetime"
+                )
         self._date_des_vues = value
 
-#encore à faire : les élèments de date_des_vues + la suite
-
     def __str__(self):
-        """Permet d'afficher les informations de l'utilisateur"""
-        return f"Utilisateur({self._id_user})"
+        """Affiche les informations principales de la statistique"""
+        return (f"Statistique(QRCode={self._id_qrcode}, Vues={self._nombre_vue}, "
+                f"Dates={self._date_des_vues})")
     
     def __eq__(self, other):
+        """Deux statistiques sont égales si elles concernent le même QRCode"""
         if not isinstance(other, Statistique):
             return False
-        return self._id_user == other._id_user
+        return self._id_qrcode == other._id_qrcode
