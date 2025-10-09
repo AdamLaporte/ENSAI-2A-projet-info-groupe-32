@@ -23,32 +23,24 @@ class StatistiqueService:
         statistiques = StatistiqueDao().lister_tous()
         return utilisateurs
 
-#à partir d'ici
-
-#    @log
-#    def trouver_par_id_user(self, id_user) -> Utilisateur:
-#        """Trouver un utilisateur à partir de son id_user"""
-#        return UtilisateurDao().trouver_par_id_user(id_user)
+    @log
+    def trouver_par_id_qrcode(self, id_qrcode) -> Statistique:
+        """Trouver un utilisateur à partir de son id_qrcode"""
+        return StatistiqueDao().trouver_par_id_qrcode(id_qrcode)
 
     @log
     def modifier_statistique(self, statistique) -> Statistique:
         """Modification d'une statistique"""
-        utilisateur.mdp = hash_password(utilisateur.mdp, utilisateur.id_user)
-        return utilisateur if UtilisateurDao().modifier_user(utilisateur) else None
+        return statistique if StatistiqueDao().modifier_statistique(statistique) else None
 
     @log
-    def supprimer(self, utilisateur) -> bool:
-        """Supprimer le compte d'un utilisateur"""
-        return UtilisateurDao().supprimer(utilisateur)
+    def supprimer(self, statistique) -> bool:
+        """Supprimer une statistique"""
+        return StatistiqueDao().supprimer(statistique)
 
     @log
-    def se_connecter(self, pseudo, mdp) -> Utilisateur:
-        """Se connecter à partir de pseudo et mdp"""
-        return UtilisateurDao().se_connecter(pseudo, hash_password(mdp, pseudo))
-
-    @log
-    def id_user_deja_utilise(self, id_user) -> bool:
-        """Vérifie si le id_user est déjà utilisé
-        Retourne True si le id_user existe déjà en BDD"""
-        utilisateurs = UtilisateurDao().lister_tous()
-        return id_user in [i.id_user for i in utilisateurs]
+    def id_qrcode_deja_utilise(self, id_qrcode) -> bool:
+        """Vérifie si le id_qrcode est déjà utilisé
+        Retourne True si le id_qrcode existe déjà en BDD"""
+        statistiques = StatistiqueDao().lister_tous()
+        return id_qrcode in [i.id_qrcode for i in statistiques]
