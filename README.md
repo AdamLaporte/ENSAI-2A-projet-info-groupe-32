@@ -244,3 +244,15 @@ When you *push* on GitHub, it triggers a pipeline that will perform the followin
   - If the score is less than 7.5, the step will fail
 
 You can check how this pipeline is progressing on your repository's GitHub page, *Actions* tab.
+
+## pour exécuter les tets
+
+- Exécuter tous les tests du projet
+pytest
+
+- Exécuter tous les tests avec un affichage détaillé
+pytest -v
+
+- Exécuter un fichier de test spécifique
+pytest tests/test_qrcode_service.py
+
