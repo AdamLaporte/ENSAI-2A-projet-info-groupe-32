@@ -4,7 +4,6 @@ from dao.db_connexion import DBConnection
 
 from business_object.qr_code import Qrcode
 
-
 class QRCodeNotFoundError(Exception):
     pass
 
@@ -17,7 +16,7 @@ class QRCodeDao:
     """DAO pour la gestion des QR codes, utilisant la connexion partagée à PostgreSQL."""
 
     def __init__(self):
-        # On récupère la connexion déjà ouverte par DBConnection (Singleton)
+        # On récupère la connexion déjà ouverte par DBConnection 
         self.conn = DBConnection().connection
 
     def créer_qrc(self, qrcode: Qrcode) -> bool:
