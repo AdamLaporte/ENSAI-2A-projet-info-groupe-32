@@ -1,7 +1,7 @@
 import logging
 
 import dotenv
-
+from src.business_object.utilisateur import Utilisateur
 from utils.log_init import initialiser_logs
 from view.accueil.accueil_vue import AccueilVue
 

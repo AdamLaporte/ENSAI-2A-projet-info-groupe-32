@@ -1,13 +1,13 @@
 {
     "ruff.lint.enable": true,
     "[python]": {
-        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.defaultFormatter": "mikoz.black-py",
         "editor.formatOnSave": true,
         "editor.insertSpaces": true,
         "editor.tabSize": 4,
     },
     "editor.codeActionsOnSave": {
-        "source.fixAll": "explicit",            
+        "source.fixAll": "explicit",
         "source.organizeImports": "explicit"
     },
     "editor.rulers": [100],
