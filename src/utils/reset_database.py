@@ -8,7 +8,7 @@ from utils.log_decorator import log
 from utils.singleton import Singleton
 from dao.db_connection import DBConnection
 
-from service.joueur_service import JoueurService
+from service.utilisateur_service import UtilisateurService
 
 
 class ResetDatabase(metaclass=Singleton):
@@ -50,10 +50,10 @@ class ResetDatabase(metaclass=Singleton):
             logging.info(e)
             raise
 
-        # Appliquer le hashage des mots de passe à chaque joueur
-        joueur_service = JoueurService()
-        for j in joueur_service.lister_tous(inclure_mdp=True):
-            joueur_service.modifier(j)
+        # Appliquer le hashage des mots de passe à chaque utilisateur
+        utilisateur_service = UtilisateurService()
+        for j in utilisateur_service.lister_tous(inclure_mdp=True):
+            utilisateur_service.modifier_user(j)
 
         return True
 
