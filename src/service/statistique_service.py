@@ -21,7 +21,7 @@ class StatistiqueService:
         Lister toutes les statistiques
         """
         statistiques = StatistiqueDao().lister_tous()
-        return utilisateurs
+        return statistiques
 
     @log
     def trouver_par_id_qrcode(self, id_qrcode) -> Statistique:

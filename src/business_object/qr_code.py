@@ -4,11 +4,31 @@ from typing import Optional
 
 class Qrcode:
     """
-    Classe métier représentant un QR code suivi.
+    Classe métier représentant un QR code suivi dans l'application.
 
-    Utilisation des @property pour exposer un accès contrôlé aux attributs.
-    - id_qrcode et date_creation sont en lecture seule (générés côté service/BDD).
-    - url, type, couleur et logo sont modifiables via les setters avec validation.
+    Cette classe encapsule toutes les informations relatives à un QR code :
+    son identifiant unique, son URL associée, le propriétaire qui l’a créé,
+    la date de création, le type (suivi ou non), ainsi que ses éléments de personnalisation
+    comme la couleur et le logo.
+
+    Attributs privés :
+        __id_qrcode (int): Identifiant unique du QR code (clé privée).
+        __url (str): Lien associé au QR code.
+        __id_proprietaire (str): Identifiant de l’utilisateur propriétaire du QR code.
+        __date_creation (datetime): Date de création du QR code.
+        __type (bool): Indique si le QR code est de type suivi (True) ou simple (False).
+        __couleur (str): Couleur dominante du QR code.
+        __logo (str): Logo intégré au centre du QR code.
+
+    Méthodes publiques :
+        afficher_infos() -> str :
+            Retourne une représentation textuelle simplifiée du QR code.
+        get_id() -> int :
+            Retourne l’identifiant du QR code.
+        get_url() -> str :
+            Retourne l’URL associée au QR code.
+        set_url(nouvelle_url: str) -> None :
+            Met à jour l’URL du QR code.
     """
 
     def __init__(
@@ -16,10 +36,10 @@ class Qrcode:
         id_qrcode: Optional[int],
         url: str,
         id_proprietaire: str,
-        date_creation: Optional[datetime] = None,
-        type: bool = True,
-        couleur: Optional[str] = None,
-        logo: Optional[str] = None,
+        date_creation: datetime,
+        type: bool,
+        couleur: str,
+        logo: str,
     ):
         """
         Args:
@@ -31,105 +51,46 @@ class Qrcode:
             couleur: couleur optionnelle.
             logo: chemin/nom du logo optionnel.
         """
-        self._id_qrcode = id_qrcode
-        self._url = None
-        self._id_proprietaire = id_proprietaire
-        self._date_creation = date_creation or datetime.utcnow()
-        self._type = None
-        self._couleur = None
-        self._logo = None
+        self.__id_qrcode = id_qrcode
+        self.__url = url
+        self.__id_proprietaire = id_proprietaire
+        self.__date_creation = date_creation
+        self.__type = type
+        self.__couleur = couleur
+        self.__logo = logo
 
-        # Utiliser les setters pour valider les valeurs initiales
-        self.url = url
-        self.type = type
-        if couleur is not None:
-            self.couleur = couleur
-        if logo is not None:
-            self.logo = logo
+    def afficher_infos(self) -> str:
+        """
+        Retourne une chaîne de caractères contenant les principales informations du QR code.
 
-    # -------------------
-    # Propriétés (read-only / read-write)
-    # -------------------
+        Returns:
+            str: Informations sous forme 'QR <id> - <url> (<couleur>)'
+        """
+        return f"QR {self.__id_qrcode} - {self.__url} ({self.__couleur})"
 
-    @property
-    def id_qrcode(self) -> Optional[int]:
-        """Identifiant unique du QR code (lecture seule)."""
-        return self._id_qrcode
+    def get_id(self) -> int:
+        """
+        Getter de l'identifiant du QR code.
 
-    @property
-    def url(self) -> str:
-        """URL associée au QR code."""
-        return self._url
+        Returns:
+            int: Identifiant unique du QR code.
+        """
+        return self.__id_qrcode
 
-    @url.setter
-    def url(self, nouvelle_url: str) -> None:
-        if not isinstance(nouvelle_url, str):
-            raise TypeError("L'URL doit être une chaîne de caractères.")
-        if not nouvelle_url.startswith(("http://", "https://")):
-            raise ValueError("L'URL doit commencer par 'http://' ou 'https://'.")
-        self._url = nouvelle_url
+    def get_url(self) -> str:
+        """
+        Getter de l'URL du QR code.
 
-    @property
-    def id_proprietaire(self) -> str:
-        """Identifiant du propriétaire (lecture seule)."""
-        return self._id_proprietaire
+        Returns:
+            str: URL actuellement associée au QR code.
+        """
+        return self.__url
 
-    @property
-    def date_creation(self) -> datetime:
-        """Date de création (lecture seule)."""
-        return self._date_creation
+    def set_url(self, nouvelle_url: str) -> None:
+        """
+        Setter permettant de modifier l’URL du QR code.
 
-    @property
-    def type(self) -> bool:
-        """Type du QR code (True = suivi, False = simple)."""
-        return self._type
-
-    @type.setter
-    def type(self, t: bool) -> None:
-        if not isinstance(t, bool):
-            raise TypeError("Le champ 'type' doit être un booléen.")
-        self._type = t
-
-    @property
-    def couleur(self) -> Optional[str]:
-        """Couleur du QR code (optionnelle)."""
-        return self._couleur
-
-    @couleur.setter
-    def couleur(self, c: str) -> None:
-        if not isinstance(c, str):
-            raise TypeError("La couleur doit être une chaîne de caractères.")
-        self._couleur = c
-
-    @property
-    def logo(self) -> Optional[str]:
-        """Logo associé au QR code """
-        return self._logo
-
-    @logo.setter
-    def logo(self, l: str) -> None:
-        if not isinstance(l, str):
-            raise TypeError("Le logo doit être une chaîne (chemin/nom).")
-        self._logo = l
-
-    # -------------------
-    # Utilitaires
-    # -------------------
-
-    def to_dict(self) -> dict:
-        """Renvoie un dictionnaire correspondant aux colonnes DB ."""
-        return {
-            "id_qrcode": self._id_qrcode,
-            "url": self._url,
-            "id_proprietaire": self._id_proprietaire,
-            "date_creation": self._date_creation,
-            "type": self._type,
-            "couleur": self._couleur,
-            "logo": self._logo,
-        }
-
-    def __repr__(self) -> str:
-        return (
-            f"Qrcode(id_qrcode={self._id_qrcode!r}, url={self._url!r}, "
-            f"owner={self._id_proprietaire!r}, date_creation={self._date_creation!r})"
-        )
+        Args:
+            nouvelle_url (str): Nouvelle URL à associer au QR code.
+        """
+        self.__url = nouvelle_url

@@ -6,13 +6,14 @@ from utils.log_decorator import log
 from dao.db_connection import DBConnection
 
 from business_object.token import Token
+from business_object.utilisateur import Utilisateur as u
 
 
 class TokenDao(metaclass=Singleton):
     """Classe contenant les méthodes pour accéder aux Tokens de la base de données"""
 
     @log
-    def creer_token(self, token) -> bool:
+    def creer_token(self, token: Token) -> bool:
         """Création d'un token dans la base de données
 
         Parameters
@@ -25,20 +26,20 @@ class TokenDao(metaclass=Singleton):
             True si la création est un succès
             False sinon
         """
-
         res = None
-
         try:
             with DBConnection().connection as connection:
                 with connection.cursor() as cursor:
                     cursor.execute(
-                        "INSERT INTO token(utilisateur_id, token, expire_dans) VALUES"
-                        "(%(id_user)s, %(token)s, %(expire_dans)s) "
-                        "RETURNING id_token;",
+                        """
+                        INSERT INTO token(id_user, jeton, date_expiration)
+                        VALUES (%(id_user)s, %(jeton)s, %(date_expiration)s)
+                        RETURNING id_token;
+                        """,
                         {
-                            "utilisateur_id": token.utilisateur_id,
-                            "token": token.token,
-                            "expire_dans": token.expire_dans,
+                            "id_user": token.id_user,
+                            "jeton": token.jeton,
+                            "date_expiration": token.date_expiration,
                         },
                     )
                     res = cursor.fetchone()
@@ -47,33 +48,30 @@ class TokenDao(metaclass=Singleton):
 
         created = False
         if res:
-            token.id_token = res["id_token"]
             created = True
 
         return created
 
     @log
-    def trouver_par_id(self, id_token) -> Token:
-        """Trouver un token grâce à son id
+    def trouver_token_par_id(self, u.id_user : str ) -> Token | None:
+        """Trouver un token grâce à son id_user
 
         Parameters
         ----------
-        id_token : int
-            ID du token à retrouver
+        u.id_user : str
+            identifiant du token à trouver
 
         Returns
         -------
         token : Token
-            Renvoie le token correspondant à l'id
+            Renvoie le token correspondant à l'id_user None s'il n'existe pas
         """
-
         try:
             with DBConnection().connection as connection:
                 with connection.cursor() as cursor:
                     cursor.execute(
-                        "SELECT * "
-                        "FROM token "
-                        "WHERE id_token = %(id_token)s;",
+                        "SELECT id_user, jeton, date_expiration "
+                        "FROM token WHERE id_token = %(id_token)s;",
                         {"id_token": id_token},
                     )
                     res = cursor.fetchone()
@@ -84,188 +82,106 @@ class TokenDao(metaclass=Singleton):
         token = None
         if res:
             token = Token(
-                id_token=res["id_token"],
-                utilisateur_id=res["utilisateur_id"],
-                token=res["token"],
-                expire_dans=res["expire_dans"],
+                jeton=res["jeton"],
+                utilisateur=Utilisateur(id_user=res["id_user"]),
+                date_expiration=res["date_expiration"],
             )
 
         return token
-
-    @log
-    def lister_tous(self) -> list[Token]:
-        """Lister tous les tokens
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        liste_tokens : list[Token]
-            Renvoie la liste de tous les tokens de la base de données
+    def supprimer_token(self, token: Token) -> bool:
         """
-
-        try:
-            with DBConnection().connection as connection:
-                with connection.cursor() as cursor:
-                    cursor.execute(
-                        "SELECT * "
-                        "FROM token;"
-                    )
-                    res = cursor.fetchall()
-        except Exception as e:
-            logging.info(e)
-            raise
-
-        liste_tokens = []
-
-        if res:
-            for row in res:
-                token = Token(
-                    id_token=row["id_token"],
-                    utilisateur_id=row["utilisateur_id"],
-                    token=row["token"],
-                    expire_dans=row["expire_dans"],
-                )
-                liste_tokens.append(token)
-
-        return liste_tokens
-
-    @log
-    def modifier(self, token) -> bool:
-        """Modification d'un token dans la base de données
+        Supprime un token de la base de données.
 
         Parameters
         ----------
         token : Token
-
-        Returns
-        -------
-        modified : bool
-            True si la modification est un succès
-            False sinon
-        """
-
-        res = None
-
-        try:
-            with DBConnection().connection as connection:
-                with connection.cursor() as cursor:
-                    cursor.execute(
-                        "UPDATE token "
-                        "SET utilisateur_id = %(utilisateur_id)s, "
-                        "    token = %(token)s, "
-                        "    expire_dans = %(expire_dans)s "
-                        "WHERE id_token = %(id_token)s;",
-                        {
-                            "utilisateur_id": token.utilisateur_id,
-                            "token": token.token,
-                            "expire_dans": token.expire_dans,
-                            "id_token": token.id_token,
-                        },
-                    )
-                    res = cursor.rowcount
-        except Exception as e:
-            logging.info(e)
-
-        return res == 1
-
-    @log
-    def supprimer(self, token) -> bool:
-        """Suppression d'un token dans la base de données
-
-        Parameters
-        ----------
-        token : Token
+            Le token à supprimer
 
         Returns
         -------
         deleted : bool
-            True si la suppression est un succès
-            False sinon
+            True si la suppression a réussi, False sinon
         """
-
         try:
-            with DBConnection().connection as connection:
-                with connection.cursor() as cursor:
+            with DBConnection().connection as conn:
+                with conn.cursor() as cursor:
                     cursor.execute(
-                        "DELETE FROM token "
-                        "WHERE id_token = %(id_token)s;",
-                        {"id_token": token.id_token},
+                        "DELETE FROM Token WHERE jeton = %(jeton)s;",
+                        {"jeton":Token.jeton}
                     )
-                    res = cursor.rowcount
+                    res = cursor.rowcount  # nombre de lignes affectées
         except Exception as e:
-            logging.info(e)
-            raise
+            logging.info(f"Erreur lors de la suppression du token {Token.jeton}: {e}")
+            return False
 
-        return res > 0
+        if res == 1:
+            logging.info(f"Token {Token.jeton} supprimé avec succès.")
+        else:
+            logging.info(f"Aucun token supprimé pour {Token.jeton}.")
+        return res == 1
 
     @log
-    def trouver_par_utilisateur_id(self, utilisateur_id) -> Token:
-        """Trouver un token actif pour un utilisateur donné
+    def est_valide_token(self, token: Token) -> bool:
+        """
+        Vérifie si un token est encore valide en termes de date d'expiration.
+        Si le token est expiré, il est supprimé de la base de données.
 
         Parameters
         ----------
-        utilisateur_id : int
-            ID de l'utilisateur pour lequel on cherche un token
+        token : Token
+            Le token à vérifier
 
         Returns
         -------
-        token : Token
-            Renvoie le token actif de l'utilisateur
+        is_valid : bool
+            True si le token est encore valide
+            False sinon (et supprime le token expiré)
         """
+        try:
+            if token.date_expiration is None:
+                return False
 
+            now = datetime.now()
+            if token.date_expiration < now:
+                self.token_dao.supprimer_token(token)
+                logging.info(f"Token {Token.jeton} expiré et supprimé de la base")
+                return False
+
+            return True
+        except Exception as e:
+            logging.info(f"Erreur lors de la vérification du token : {e}")
+            return False
+
+    @log
+    def trouver_id_user_par_token(self, jeton: str) -> str | None:
+        """Trouver l'id_user associé à un jeton
+
+        Parameters
+        ----------
+        jeton : str
+            Le jeton à rechercher
+
+        Returns
+        -------
+        id_user : str
+            L'identifiant de l'utilisateur associé au jeton, ou None s'il n'existe pas
+        """
         try:
             with DBConnection().connection as connection:
                 with connection.cursor() as cursor:
                     cursor.execute(
-                        "SELECT * "
-                        "FROM token "
-                        "WHERE utilisateur_id = %(utilisateur_id)s "
-                        "AND expire_dans > NOW();",
-                        {"utilisateur_id": utilisateur_id},
+                        "SELECT id_user FROM token WHERE jeton = %(jeton)s;",
+                        {"jeton": jeton},
                     )
                     res = cursor.fetchone()
         except Exception as e:
             logging.info(e)
-            raise
+            return None
 
-        token = None
         if res:
-            token = Token(
-                id_token=res["id_token"],
-                utilisateur_id=res["utilisateur_id"],
-                token=res["token"],
-                expire_dans=res["expire_dans"],
-            )
-
-        return token
+            return res["id_user"]
+        return None
 
     @log
-    def supprimer_expired_tokens(self) -> int:
-        """Supprimer les tokens expirés
+    def existe_token():
 
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        deleted_count : int
-            Nombre de tokens supprimés
-        """
-
-        try:
-            with DBConnection().connection as connection:
-                with connection.cursor() as cursor:
-                    cursor.execute(
-                        "DELETE FROM token "
-                        "WHERE expire_dans < NOW();"
-                    )
-                    res = cursor.rowcount
-        except Exception as e:
-            logging.info(e)
-            raise
-
-        return res

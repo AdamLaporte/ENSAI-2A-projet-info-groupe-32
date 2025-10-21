@@ -1,151 +1,143 @@
 import os
-
 import pytest
-
 from unittest.mock import patch
 
 from utils.reset_database import ResetDatabase
-
 from utils.securite import hash_password
 
 from dao.utilisateur_dao import UtilisateurDao
-
 from business_object.utilisateur import Utilisateur
+from service.utilisateur_service import UtilisateurService
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_environment():
     """Initialisation des données de test pour UtilisateurDao"""
-    with patch.dict(os.environ, {"SCHEMA": "projet_test_dao"}):
+    # On force le schéma de tests via la variable utilisée par le code
+    with patch.dict(os.environ, {"POSTGRES_SCHEMA": "projet_test_dao"}):
         ResetDatabase().lancer(test_dao=True)
     yield
 
-
-def test_trouver_par_id_user_existant():
-    """Recherche par id_user d'un utilisateur existant"""
-    # GIVEN
-    id_user = "user_001"
-    # WHEN
-    utilisateur = UtilisateurDao().trouver_par_id_user(id_user)
-    # THEN
-    assert utilisateur is not None
-    assert isinstance(utilisateur, Utilisateur)
-    assert utilisateur.id_user == id_user
-
-
-def test_trouver_par_id_user_non_existant():
-    """Recherche par id_user d'un utilisateur n'existant pas"""
-    # GIVEN
-    id_user = "inexistant"
-    # WHEN
-    utilisateur = UtilisateurDao().trouver_par_id_user(id_user)
-    # THEN
-    assert utilisateur is None
-
-
 def test_lister_tous():
-    """Vérifie que la méthode renvoie une liste de Utilisateur de taille ≥ 2"""
-    # WHEN
+    """La méthode renvoie une liste de Utilisateur de taille ≥ 2"""
     utilisateurs = UtilisateurDao().lister_tous()
-    # THEN
     assert isinstance(utilisateurs, list)
     assert all(isinstance(u, Utilisateur) for u in utilisateurs)
     assert len(utilisateurs) >= 2
 
-
 def test_creer_user_ok():
-    """Création d'Utilisateur réussie"""
-    # GIVEN
-    utilisateur = Utilisateur(id_user="temp_user", mdp=hash_password("pwd", "temp_user"))
-    # WHEN
-    creation_ok = UtilisateurDao().creer_user(utilisateur)
-    # THEN
-    assert creation_ok
-    # id_user est clé primaire fournie, on vérifie existence
-    u = UtilisateurDao().trouver_par_id_user("temp_user")
-    assert u is not None
+    """Création d'utilisateur réussie avec id auto-généré"""
+    nom_user = "temp_user"
+    mdp_h = hash_password("pwd", nom_user)
+    u = Utilisateur(nom_user=nom_user, mdp=mdp_h)
 
+    ok = UtilisateurDao().creer_user(u)
+    assert ok is True
+    assert isinstance(u.id_user, int) and u.id_user > 0
+
+    # Vérifier existence par id
+    u_db = UtilisateurDao().trouver_par_id_user(u.id_user)
+    assert u_db is not None
+    assert u_db.nom_user == nom_user
 
 def test_creer_user_ko():
-    """Création échouée (id_user None)"""
-    # GIVEN
-    utilisateur = Utilisateur(id_user=None, mdp=None)
-    # WHEN
-    creation_ok = UtilisateurDao().creer_user(utilisateur)
-    # THEN
-    assert not creation_ok
+    """Création échouée si données invalides"""
+    # nom_user manquant et mdp manquant
+    u = Utilisateur(nom_user=None, mdp=None)
+    ok = UtilisateurDao().creer_user(u)
+    assert ok is False
 
+def test_trouver_par_id_user_existant():
+    """Recherche par id_user d'un utilisateur existant"""
+    # On crée un utilisateur pour être sûr de l’existence
+    nom_user = "user_001"
+    mdp_h = hash_password("pwd", nom_user)
+    u = Utilisateur(nom_user=nom_user, mdp=mdp_h)
+    UtilisateurDao().creer_user(u)
+
+    utilisateur = UtilisateurDao().trouver_par_id_user(u.id_user)
+    assert utilisateur is not None
+    assert isinstance(utilisateur, Utilisateur)
+    assert utilisateur.id_user == u.id_user
+    assert utilisateur.nom_user == nom_user
+
+def test_trouver_par_id_user_non_existant():
+    """Recherche par id_user inexistant"""
+    utilisateur = UtilisateurDao().trouver_par_id_user(999999)
+    assert utilisateur is None
+
+def test_trouver_par_nom_user_ok():
+    """Recherche par nom_user (login)"""
+    nom_user = "lookup_user"
+    mdp_h = hash_password("pwd", nom_user)
+    u = Utilisateur(nom_user=nom_user, mdp=mdp_h)
+    UtilisateurDao().creer_user(u)
+
+    u_db = UtilisateurDao().trouver_par_nom_user(nom_user)
+    assert u_db is not None
+    assert u_db.nom_user == nom_user
+    assert isinstance(u_db.id_user, int)
 
 def test_modifier_user_ok():
-    """Modification d'un utilisateur réussie"""
-    # GIVEN
-    existing = UtilisateurDao().lister_tous()[0]
-    existing.mdp = hash_password("new_pwd", existing.id_user)
-    # WHEN
-    modification_ok = UtilisateurDao().modifier_user(existing)
-    # THEN
-    assert modification_ok
-    # vérifier en base
-    u = UtilisateurDao().trouver_par_id_user(existing.id_user)
-    assert u.mdp == existing.mdp
+    """Modification (rehash déjà faite au niveau service)"""
+    # Crée un utilisateur
+    nom_user = "john_mod"
+    u = Utilisateur(nom_user=nom_user, mdp=hash_password("old", nom_user))
+    UtilisateurDao().creer_user(u)
 
+    # Modifie son mdp via service pour appliquer le hash avec nom_user
+    u.mdp = "new_pwd"
+    assert UtilisateurService().modifier_user(u) is not None
+
+    # Vérifier en base
+    u_db = UtilisateurDao().trouver_par_id_user(u.id_user)
+    assert u_db is not None
+    assert u_db.mdp != "new_pwd"  # bien hashé
 
 def test_modifier_user_ko():
     """Modification échouée (id_user inexistant)"""
-    # GIVEN
-    utilisateur = Utilisateur(id_user="no_user", mdp=hash_password("pwd", "no_user"))
-    # WHEN
-    modification_ok = UtilisateurDao().modifier_user(utilisateur)
-    # THEN
-    assert not modification_ok
-
+    u = Utilisateur(id_user=999999, nom_user="no_user", mdp=hash_password("pwd", "no_user"))
+    ok = UtilisateurDao().modifier_user(u)
+    assert ok is False
 
 def test_supprimer_ok():
-    """Suppression d'un utilisateur réussie"""
-    # GIVEN
-    user = Utilisateur(id_user="to_delete", mdp=hash_password("pwd", "to_delete"))
-    UtilisateurDao().creer_user(user)
-    # WHEN
-    suppression_ok = UtilisateurDao().supprimer(user)
-    # THEN
-    assert suppression_ok
-    assert UtilisateurDao().trouver_par_id_user("to_delete") is None
+    """Suppression réussie"""
+    nom_user = "to_delete"
+    u = Utilisateur(nom_user=nom_user, mdp=hash_password("pwd", nom_user))
+    UtilisateurDao().creer_user(u)
 
+    ok = UtilisateurDao().supprimer(u)
+    assert ok is True
+    assert UtilisateurDao().trouver_par_id_user(u.id_user) is None
 
 def test_supprimer_ko():
-    """Suppression échouée (id_user inexistant)"""
-    # GIVEN
-    utilisateur = Utilisateur(id_user="ghost", mdp="irrelevant")
-    # WHEN
-    suppression_ok = UtilisateurDao().supprimer(utilisateur)
-    # THEN
-    assert not suppression_ok
-
+    """Suppression échouée (id inexistant)"""
+    u = Utilisateur(id_user=999999, nom_user="ghost", mdp="irrelevant")
+    ok = UtilisateurDao().supprimer(u)
+    assert ok is False
 
 def test_se_connecter_ok():
-    """Connexion d'un utilisateur réussie"""
-    # GIVEN
-    id_user = "auth_user"
+    """Connexion par nom_user + mdp hashé"""
+    nom_user = "auth_user"
     mdp_clair = "secret"
-    hashed = hash_password(mdp_clair, id_user)
-    user = Utilisateur(id_user=id_user, mdp=hashed)
-    UtilisateurDao().creer_user(user)
-    # WHEN
-    res = UtilisateurDao().se_connecter(id_user, hashed)
-    # THEN
-    assert isinstance(res, Utilisateur)
-    assert res.id_user == id_user
+    mdp_hash = hash_password(mdp_clair, nom_user)
 
+    # provision
+    u = Utilisateur(nom_user=nom_user, mdp=mdp_hash)
+    UtilisateurDao().creer_user(u)
+
+    # login
+    res = UtilisateurDao().se_connecter(nom_user, mdp_hash)
+    assert isinstance(res, Utilisateur)
+    assert res.nom_user == nom_user
 
 def test_se_connecter_ko():
     """Connexion échouée (mauvais mdp)"""
-    # GIVEN
-    id_user = "auth_user2"
-    mdp_clair = "secret2"
-    hashed = hash_password(mdp_clair, id_user)
-    UtilisateurDao().creer_user(Utilisateur(id_user=id_user, mdp=hashed))
-    # WHEN
-    res = UtilisateurDao().se_connecter(id_user, hash_password("wrong", id_user))
-    # THEN
+    nom_user = "auth_user2"
+    real_hash = hash_password("secret2", nom_user)
+    UtilisateurDao().creer_user(Utilisateur(nom_user=nom_user, mdp=real_hash))
+
+    bad_hash = hash_password("wrong", nom_user)
+    res = UtilisateurDao().se_connecter(nom_user, bad_hash)
     assert res is None
 
 if __name__ == "__main__":
