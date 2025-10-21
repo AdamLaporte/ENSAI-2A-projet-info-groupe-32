@@ -3,54 +3,68 @@ from utils.securite import hash_password
 from business_object.utilisateur import Utilisateur
 from dao.utilisateur_dao import UtilisateurDao
 
+
 class UtilisateurService:
-    """Classe contenant les méthodes de service des Utilisateurs"""
-    
-    @log
-    def creer_user(self, id_user, mdp) -> Utilisateur:
-        """Création d'un utilisateur à partir de ses attributs"""
-        nouveau_utilisateur = Utilisateur(
-            id_user=id_user,
-            mdp=hash_password(mdp, id_user),
-        )
-        return nouveau_utilisateur if UtilisateurDao().creer_user(nouveau_utilisateur) else None
+    """Classe contenant les méthodes de service des Utilisateurs
+       Nouveau contrat: id_user = int (PK), nom_user = str (login)
+    """
 
     @log
-    def lister_tous(self, inclure_mdp=False) -> list[Utilisateur]:
-        """Lister tous les utilisateurs
-        Si inclure_mdp=True, les mots de passe seront inclus
-        Par défaut, tous les mdp des utilisateurs sont à None
+    def creer_user(self, nom_user: str, mdp: str) -> Utilisateur | None:
+        """Création d'un utilisateur à partir de son nom_user et mdp
+           - id_user est auto-généré en BDD
+           - hash basé sur nom_user pour stabilité
         """
+        hashed = hash_password(mdp, nom_user)
+        nouveau = Utilisateur(
+            id_user=None,           # sera rempli par le DAO (RETURNING id_user)
+            nom_user=nom_user,
+            mdp=hashed,
+        )
+        return nouveau if UtilisateurDao().creer_user(nouveau) else None
+
+    @log
+    def lister_tous(self, inclure_mdp: bool = False) -> list[Utilisateur]:
+        """Lister tous les utilisateurs; masque les mdp par défaut"""
         utilisateurs = UtilisateurDao().lister_tous()
         if not inclure_mdp:
-            for i in utilisateurs:
-                i.mdp = None
+            for u in utilisateurs:
+                u.mdp = None
         return utilisateurs
 
     @log
-    def trouver_par_id_user(self, id_user) -> Utilisateur:
-        """Trouver un utilisateur à partir de son id_user"""
+    def trouver_par_id_user(self, id_user: int) -> Utilisateur | None:
+        """Trouver un utilisateur par id_user (entier)"""
         return UtilisateurDao().trouver_par_id_user(id_user)
 
     @log
-    def modifier_user(self, utilisateur) -> Utilisateur:
-        """Modification d'un utilisateur"""
-        utilisateur.mdp = hash_password(utilisateur.mdp, utilisateur.id_user)
+    def trouver_par_nom_user(self, nom_user: str) -> Utilisateur | None:
+        """Trouver un utilisateur par nom_user (login)"""
+        return UtilisateurDao().trouver_par_nom_user(nom_user)
+
+    @log
+    def modifier_user(self, utilisateur: Utilisateur) -> Utilisateur | None:
+        """Modifier un utilisateur; re-hash si mdp fourni en clair
+           Convention: si utilisateur.mdp est déjà hashé, ne pas le ré‑hasher
+           Ici, on choisit de re‑hasher si un mdp non vide est fourni.
+        """
+        if utilisateur.mdp:
+            # saler avec nom_user (stable) plutôt que id_user
+            utilisateur.mdp = hash_password(utilisateur.mdp, utilisateur.nom_user)
         return utilisateur if UtilisateurDao().modifier_user(utilisateur) else None
 
     @log
-    def supprimer(self, utilisateur) -> bool:
+    def supprimer(self, utilisateur: Utilisateur) -> bool:
         """Supprimer le compte d'un utilisateur"""
         return UtilisateurDao().supprimer(utilisateur)
 
     @log
-    def se_connecter(self, pseudo, mdp) -> Utilisateur:
-        """Se connecter à partir de pseudo et mdp"""
-        return UtilisateurDao().se_connecter(pseudo, hash_password(mdp, pseudo))
+    def se_connecter(self, nom_user: str, mdp: str) -> Utilisateur | None:
+        """Connexion par nom_user + mdp (hash avec nom_user)"""
+        return UtilisateurDao().se_connecter(nom_user, hash_password(mdp, nom_user))
 
     @log
-    def id_user_deja_utilise(self, id_user) -> bool:
-        """Vérifie si le id_user est déjà utilisé
-        Retourne True si le id_user existe déjà en BDD"""
+    def nom_user_deja_utilise(self, nom_user: str) -> bool:
+        """Vérifie si le nom_user est déjà utilisé"""
         utilisateurs = UtilisateurDao().lister_tous()
-        return id_user in [i.id_user for i in utilisateurs]
+        return nom_user in [u.nom_user for u in utilisateurs]

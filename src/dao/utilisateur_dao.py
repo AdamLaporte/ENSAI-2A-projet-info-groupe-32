@@ -2,155 +2,158 @@ import logging
 
 from utils.singleton import Singleton
 from utils.log_decorator import log
-
 from dao.db_connection import DBConnection
-
 from business_object.utilisateur import Utilisateur
 
 
 class UtilisateurDao(metaclass=Singleton):
-    """Classe contenant les méthodes pour accéder aux Utilisateurs de la base de données"""
+    """Accès aux Utilisateurs en BDD (id_user: int PK, nom_user: str)"""
 
     @log
-    def creer_user(self, utilisateur) -> bool:
-        """Creation d'un utilisateur dans la base de données
-
-        Parameters
-        ----------
-        utilisateur : Utilisateur
-
-        Returns
-        -------
-        created : bool
-            True si la création est un succès
-            False sinon
+    def creer_user(self, utilisateur: Utilisateur) -> bool:
         """
-
+        Création d'un utilisateur.
+        Attend utilisateur.nom_user (str) et utilisateur.mdp (str) remplis.
+        Renseigne utilisateur.id_user depuis RETURNING.
+        """
         res = None
-
         try:
             with DBConnection().connection as connection:
                 with connection.cursor() as cursor:
                     cursor.execute(
-                        "INSERT INTO utilisateur(id_user, mdp) VALUES        "
-                        "(%(id_user)s, %(mdp)s)                              "
-                        "  RETURNING id_user;                                ",
+                        """
+                        INSERT INTO utilisateur (nom_user, mdp)
+                        VALUES (%(nom_user)s, %(mdp)s)
+                        RETURNING id_user;
+                        """,
                         {
-                            "id_user": utilisateur.id_user,
+                            "nom_user": utilisateur.nom_user,
                             "mdp": utilisateur.mdp,
                         },
                     )
-                    res = cursor.fetchone()
+                    row = cursor.fetchone()
+                    if row:
+                        # selon le cursor_factory (DictCursor ou non)
+                        utilisateur.id_user = row["id_user"] if isinstance(row, dict) else row[0]
+                        res = True
         except Exception as e:
             logging.info(e)
-
-        created = False
-        if res:
-            created = True
-
-        return created
+            res = False
+        return bool(res)
 
     @log
-    def trouver_par_id_user(self, id_user) -> Utilisateur:
-        """trouver un utilisateur grace à son id_user
-
-        Parameters
-        ----------
-        id_user : str
-            identifiant de l'utilisateur que l'on souhaite trouver
-
-        Returns
-        -------
-        utilisateur : Utilisateur
-            renvoie l'utilisateur que l'on cherche par id_user
-        """
+    def trouver_par_id_user(self, id_user: int) -> Utilisateur | None:
+        """Trouver un utilisateur par id_user (entier)."""
         try:
             with DBConnection().connection as connection:
                 with connection.cursor() as cursor:
                     cursor.execute(
-                        "SELECT *                           "
-                        "  FROM utilisateur                 "
-                        " WHERE id_user = %(id_user)s;      ",
+                        """
+                        SELECT id_user, nom_user, mdp
+                          FROM utilisateur
+                         WHERE id_user = %(id_user)s;
+                        """,
                         {"id_user": id_user},
                     )
-                    res = cursor.fetchone()
+                    row = cursor.fetchone()
         except Exception as e:
             logging.info(e)
             raise
 
-        utilisateur = None
-        if res:
-            utilisateur = Utilisateur(
-                id_user=res["id_user"],
-                mdp=res["mdp"],
-            )
+        if not row:
+            return None
 
-        return utilisateur
+        return Utilisateur(
+            id_user=row["id_user"] if isinstance(row, dict) else row[0],
+            nom_user=row["nom_user"] if isinstance(row, dict) else row[1],
+            mdp=row["mdp"] if isinstance(row, dict) else row[2],
+        )
+
+    @log
+    def trouver_par_nom_user(self, nom_user: str) -> Utilisateur | None:
+        """Trouver un utilisateur par nom_user (login)."""
+        try:
+            with DBConnection().connection as connection:
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        """
+                        SELECT id_user, nom_user, mdp
+                          FROM utilisateur
+                         WHERE nom_user = %(nom_user)s;
+                        """,
+                        {"nom_user": nom_user},
+                    )
+                    row = cursor.fetchone()
+        except Exception as e:
+            logging.info(e)
+            raise
+
+        if not row:
+            return None
+
+        return Utilisateur(
+            id_user=row["id_user"] if isinstance(row, dict) else row[0],
+            nom_user=row["nom_user"] if isinstance(row, dict) else row[1],
+            mdp=row["mdp"] if isinstance(row, dict) else row[2],
+        )
 
     @log
     def lister_tous(self) -> list[Utilisateur]:
-        """lister tous les utilisateurs
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        liste_utilisateurs : list[Utilisateur]
-            renvoie la liste de tous les utilisateurs dans la base de données
-        """
-
+        """Lister tous les utilisateurs."""
         try:
             with DBConnection().connection as connection:
                 with connection.cursor() as cursor:
                     cursor.execute(
-                        "SELECT *                              "
-                        "  FROM utilisateur;                   "
+                        """
+                        SELECT id_user, nom_user, mdp
+                          FROM utilisateur
+                         ORDER BY id_user;
+                        """
                     )
-                    res = cursor.fetchall()
+                    rows = cursor.fetchall()
         except Exception as e:
             logging.info(e)
             raise
 
-        liste_utilisateurs = []
-
-        if res:
-            for row in res:
-                utilisateur = Utilisateur(
-                    id_user=row["id_user"],
-                    mdp=row["mdp"],
-                )
-
-                liste_utilisateurs.append(utilisateur)
-
-        return liste_utilisateurs
+        liste: list[Utilisateur] = []
+        if rows:
+            dict_like = isinstance(rows[0], dict)
+            for r in rows:
+                if dict_like:
+                    u = Utilisateur(
+                        id_user=r["id_user"],
+                        nom_user=r["nom_user"],
+                        mdp=r["mdp"],
+                    )
+                else:
+                    u = Utilisateur(
+                        id_user=r[0],
+                        nom_user=r[1],
+                        mdp=r[2],
+                    )
+                liste.append(u)
+        return liste
 
     @log
-    def modifier_user(self, utilisateur) -> bool:
-        """Modification d'un utilisateur dans la base de données
-
-        Parameters
-        ----------
-        utilisateur : Utilisateur
-
-        Returns
-        -------
-        modified : bool
-            True si la modification est un succès
-            False sinon
+    def modifier_user(self, utilisateur: Utilisateur) -> bool:
         """
-
-        res = None
-
+        Modification d'un utilisateur.
+        Met à jour nom_user et/ou mdp selon ce qui est fourni.
+        Ici, on met à jour les deux colonnes avec les valeurs présentes.
+        """
+        res = 0
         try:
             with DBConnection().connection as connection:
                 with connection.cursor() as cursor:
                     cursor.execute(
-                        "UPDATE utilisateur                             "
-                        "   SET mdp = %(mdp)s                          "
-                        " WHERE id_user = %(id_user)s;                 ",
+                        """
+                        UPDATE utilisateur
+                           SET nom_user = %(nom_user)s,
+                               mdp      = %(mdp)s
+                         WHERE id_user  = %(id_user)s;
+                        """,
                         {
+                            "nom_user": utilisateur.nom_user,
                             "mdp": utilisateur.mdp,
                             "id_user": utilisateur.id_user,
                         },
@@ -158,76 +161,54 @@ class UtilisateurDao(metaclass=Singleton):
                     res = cursor.rowcount
         except Exception as e:
             logging.info(e)
-
         return res == 1
 
     @log
-    def supprimer(self, utilisateur) -> bool:
-        """Suppression d'un utilisateur dans la base de données
-
-        Parameters
-        ----------
-        utilisateur : Utilisateur
-            utilisateur à supprimer de la base de données
-
-        Returns
-        -------
-            True si l'utilisateur a bien été supprimé
-        """
-
+    def supprimer(self, utilisateur: Utilisateur) -> bool:
+        """Supprimer un utilisateur par id_user."""
         try:
             with DBConnection().connection as connection:
                 with connection.cursor() as cursor:
-                    # Supprimer le compte d'un utilisateur
                     cursor.execute(
-                        "DELETE FROM utilisateur                "
-                        " WHERE id_user=%(id_user)s             ",
+                        """
+                        DELETE FROM utilisateur
+                         WHERE id_user = %(id_user)s;
+                        """,
                         {"id_user": utilisateur.id_user},
                     )
                     res = cursor.rowcount
         except Exception as e:
             logging.info(e)
             raise
-
         return res > 0
 
     @log
-    def se_connecter(self, id_user, mdp) -> Utilisateur:
-        """se connecter grâce à son id_user et son mot de passe
-
-        Parameters
-        ----------
-        id_user : str
-            identifiant de l'utilisateur que l'on souhaite connecter
-        mdp : str
-            mot de passe de l'utilisateur
-
-        Returns
-        -------
-        utilisateur : Utilisateur
-            renvoie l'utilisateur que l'on cherche
+    def se_connecter(self, nom_user: str, mdp_hash: str) -> Utilisateur | None:
         """
-        res = None
+        Connexion par nom_user + mot de passe hashé (déjà hashé en service).
+        """
         try:
             with DBConnection().connection as connection:
                 with connection.cursor() as cursor:
                     cursor.execute(
-                        "SELECT *                           "
-                        "  FROM utilisateur                 "
-                        " WHERE id_user = %(id_user)s       "
-                        "   AND mdp = %(mdp)s;              ",
-                        {"id_user": id_user, "mdp": mdp},
+                        """
+                        SELECT id_user, nom_user, mdp
+                          FROM utilisateur
+                         WHERE nom_user = %(nom_user)s
+                           AND mdp      = %(mdp)s;
+                        """,
+                        {"nom_user": nom_user, "mdp": mdp_hash},
                     )
-                    res = cursor.fetchone()
+                    row = cursor.fetchone()
         except Exception as e:
             logging.info(e)
+            return None
 
-        utilisateur = None
+        if not row:
+            return None
 
-        if res:
-            utilisateur = Utilisateur(
-                id_user=res["id_user"],
-                mdp=res["mdp"],
-            )
-
-        return utilisateur
+        return Utilisateur(
+            id_user=row["id_user"] if isinstance(row, dict) else row[0],
+            nom_user=row["nom_user"] if isinstance(row, dict) else row[1],
+            mdp=row["mdp"] if isinstance(row, dict) else row[2],
+        )
