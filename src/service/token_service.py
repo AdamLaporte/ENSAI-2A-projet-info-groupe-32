@@ -12,12 +12,12 @@ class TokenService:
 
     @log
     def creer(self, utilisateur_id, expire_dans) -> Token:
-        """Création d'un nouveau token pour un utilisateur"""     
+        """Création d'un nouveau token pour un utilisateur"""
         nouveau_token = Token(
             utilisateur_id=utilisateur_id,
             token=generer_token(),
-            expire_dans=expire_dans
-        )   
+            expire_dans=expire_dans,
+        )
         return nouveau_token if TokenDao().creer(nouveau_token) else None
 
     @log
