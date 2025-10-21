@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import datetime
 from src.business_object.utilisateur import Utilisateur as u
 
 
@@ -16,7 +16,7 @@ class Token:
         date d'expiration du jeton (privé)
     """
 
-    def __init__(self, jeton: str, utilisateur: u, date_expiration : date ):
+    def __init__(self, jeton: str, u : Utilisateur, date_expiration : datetime ):
         """Constructeur"""
         self.__jeton = jeton
         self.__id_user = u.id_user
@@ -38,7 +38,7 @@ class Token:
 
     @date_expiration.setter
     def date_expiration(self, value):
-        if value is not None and not isinstance(value, date):
+        if value is not None and not isinstance(value, datetime):
             raise ValueError("La date d'expiration doit être une date")
         self.__date_expiration = value
 

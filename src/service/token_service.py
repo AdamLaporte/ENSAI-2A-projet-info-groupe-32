@@ -12,18 +12,14 @@ class TokenService:
 
     @log
     def creer(self, utilisateur_id, expire_dans) -> Token:
-        """Création d'un nouveau token pour un utilisateur"""     
+        """Création d'un nouveau token pour un utilisateur"""
         nouveau_token = Token(
             utilisateur_id=utilisateur_id,
             token=generer_token(),
             expire_dans=expire_dans
-        )   
+        )
         return nouveau_token if TokenDao().creer(nouveau_token) else None
 
-    @log
-    def lister_tous(self) -> list[Token]:
-        """Lister tous les tokens"""
-        return TokenDao().lister_tous()
 
     @log
     def trouver_par_id(self, id_token) -> Token:
@@ -45,45 +41,29 @@ class TokenService:
         """Trouver un token actif pour un utilisateur donné"""
         return TokenDao().trouver_par_utilisateur_id(utilisateur_id)
 
+    @staticmethod
     @log
-    def valider_token(self, token_valide) -> bool:
-        """Valider si un token est valide (pas expiré)"""
-        if not token_valide:
+    def est_valide_token(token: Token) -> bool:
+        """
+        Vérifie si un token est encore valide en termes de date d'expiration.
+
+        Parameters
+        ----------
+        token : Token
+            Le token à vérifier
+
+        Returns
+        -------
+        is_valid : bool
+            True si le token est encore valide (date d'expiration future)
+            False sinon
+        """
+        try:
+            if token.date_expiration is None:
+                return False
+            # Comparer la date d'expiration avec la date et heure actuelle
+            now = datetime.now().date()  # uniquement la date
+            return token.date_expiration >= now
+        except Exception as e:
+            logging.info(f"Erreur lors de la vérification du token : {e}")
             return False
-        return token_valide.expire_dans > datetime.now()
-
-    @log
-    def afficher_tous(self) -> str:
-        """Afficher tous les tokens sous forme de tableau"""
-        entetes = ["utilisateur_id", "token", "expire_dans"]
-
-        tokens = TokenDao().lister_tous()
-        tokens_as_list = [t.as_list() for t in tokens]
-
-        str_tokens = "-" * 100
-        str_tokens += "\nListe des tokens\n"
-        str_tokens += "-" * 100
-        str_tokens += "\n"
-        str_tokens += tabulate(
-            tabular_data=tokens_as_list,
-            headers=entetes,
-            tablefmt="psql",
-            floatfmt=".2f",
-        )
-        str_tokens += "\n"
-
-        return str_tokens
-
-    @log
-    def supprimer_expired_tokens(self) -> int:
-        """Supprimer les tokens expirés"""
-        tokens_expired = TokenDao().lister_tous_expired()
-        for token in tokens_expired:
-            TokenDao().supprimer(token)
-        return len(tokens_expired)
-
-    @log
-    def token_deja_utilise(self, utilisateur_id) -> bool:
-        """Vérifie si un utilisateur a déjà un token valide"""
-        token = TokenDao().trouver_par_utilisateur_id(utilisateur_id)
-        return token is not None and self.valider_token(token)
