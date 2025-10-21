@@ -32,7 +32,7 @@ class TokenDao(metaclass=Singleton):
             with DBConnection().connection as connection:
                 with connection.cursor() as cursor:
                     cursor.execute(
-                        "INSERT INTO token(utilisateur_id, token, expire_dans) VALUES"
+                        "INSERT INTO token(utilisateur.id_user, jeton, date_expiration) VALUES"
                         "(%(id_user)s, %(token)s, %(expire_dans)s) "
                         "RETURNING id_token;",
                         {
