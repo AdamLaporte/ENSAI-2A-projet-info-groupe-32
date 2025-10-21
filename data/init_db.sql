@@ -10,8 +10,8 @@ DROP TABLE IF EXISTS token CASCADE;
 CREATE TABLE token (
   id_token SERIAL PRIMARY KEY,
   id_user INT NOT NULL,
-  token TEXT NOT NULL,
-  UNIQUE (token),
+  jeton TEXT NOT NULL,
+  UNIQUE (jeton),
   FOREIGN KEY (id_user) REFERENCES utilisateur(id_user) ON DELETE CASCADE
 );
 CREATE INDEX idx_token_id_user ON token(id_user);
@@ -36,7 +36,7 @@ CREATE TABLE statistique (
   id_stat SERIAL PRIMARY KEY,
   id_qrcode INT NOT NULL,
   nombre_vue INT DEFAULT 0 CHECK (nombre_vue >= 0),
-  date_des DATE,
+  date_des_vues DATE,
   -- option: vues JSONB,
   FOREIGN KEY (id_qrcode) REFERENCES qrcode(id_qrcode) ON DELETE CASCADE
 );

@@ -52,8 +52,8 @@ class ResetDatabase(metaclass=Singleton):
 
         # Appliquer le hashage des mots de passe à chaque utilisateur
         utilisateur_service = UtilisateurService()
-        for j in utilisateur_service.lister_tous(inclure_mdp=True):
-            utilisateur_service.modifier_user(j)
+        for i in utilisateur_service.lister_tous(inclure_mdp=True):
+            utilisateur_service.modifier_user(i)
 
         return True
 
