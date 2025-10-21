@@ -15,7 +15,7 @@ class Qrcode:
         __url (str): Lien associé au QR code.
         __id_proprietaire (str): Identifiant de l’utilisateur propriétaire du QR code.
         __date_creation (datetime): Date de création du QR code.
-        __type (bool): Indique si le QR code est de type suivi (True) ou simple (False).
+        __type_qrcode (bool): Indique si le QR code est de type suivi (True) ou simple (False).
         __couleur (str): Couleur dominante du QR code.
         __logo (str): Logo intégré au centre du QR code.
 
@@ -36,7 +36,7 @@ class Qrcode:
         url: str,
         id_proprietaire: str,
         date_creation: datetime,
-        type: bool,
+        type_qrcode: bool,
         couleur: str,
         logo: str,
     ):
@@ -56,7 +56,7 @@ class Qrcode:
         self.__url = url
         self.__id_proprietaire = id_proprietaire
         self.__date_creation = date_creation
-        self.__type = type
+        self.__type_qrcode = type_qrcode
         self.__couleur = couleur
         self.__logo = logo
 
