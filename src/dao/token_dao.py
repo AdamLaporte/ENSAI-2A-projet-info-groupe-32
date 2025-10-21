@@ -71,9 +71,7 @@ class TokenDao(metaclass=Singleton):
             with DBConnection().connection as connection:
                 with connection.cursor() as cursor:
                     cursor.execute(
-                        "SELECT * "
-                        "FROM token "
-                        "WHERE id_token = %(id_token)s;",
+                        "SELECT * " "FROM token " "WHERE id_token = %(id_token)s;",
                         {"id_token": id_token},
                     )
                     res = cursor.fetchone()
@@ -109,10 +107,7 @@ class TokenDao(metaclass=Singleton):
         try:
             with DBConnection().connection as connection:
                 with connection.cursor() as cursor:
-                    cursor.execute(
-                        "SELECT * "
-                        "FROM token;"
-                    )
+                    cursor.execute("SELECT * " "FROM token;")
                     res = cursor.fetchall()
         except Exception as e:
             logging.info(e)
@@ -190,8 +185,7 @@ class TokenDao(metaclass=Singleton):
             with DBConnection().connection as connection:
                 with connection.cursor() as cursor:
                     cursor.execute(
-                        "DELETE FROM token "
-                        "WHERE id_token = %(id_token)s;",
+                        "DELETE FROM token " "WHERE id_token = %(id_token)s;",
                         {"id_token": token.id_token},
                     )
                     res = cursor.rowcount
@@ -259,10 +253,7 @@ class TokenDao(metaclass=Singleton):
         try:
             with DBConnection().connection as connection:
                 with connection.cursor() as cursor:
-                    cursor.execute(
-                        "DELETE FROM token "
-                        "WHERE expire_dans < NOW();"
-                    )
+                    cursor.execute("DELETE FROM token " "WHERE expire_dans < NOW();")
                     res = cursor.rowcount
         except Exception as e:
             logging.info(e)
