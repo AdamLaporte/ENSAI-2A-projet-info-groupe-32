@@ -1,6 +1,8 @@
-# dao/qrcode_dao.py
-from typing import List, Optional, Any, Dict
 import logging
+from typing import List, Optional, Any, Dict
+
+from utils.singleton import Singleton
+from utils.log_decorator import log
 
 from dao.db_connexion import DBConnection
 from business_object.qr_code import Qrcode
@@ -18,138 +20,147 @@ class UnauthorizedError(Exception):
 
 class QRCodeDao:
     """
-    DAO pour la table `qrcodes`.
-    - Les méthodes retournent l'objet Qrcode reconstruit quand pertinent.
-    - Elles gèrent proprement la transaction (commit/rollback) et lèvent des exceptions métier.
-    - Compatible avec Qrcode exposant des @property (préféré) ou des getters get_*
+    DAO simple pour la table `qrcodes`.
+    Style : lecture via propriétés de Qrcode, méthodes d'écriture renvoyant bool,
+    méthode de modification renvoyant l'objet mis à jour.
     """
 
     def __init__(self):
-        self.conn = DBConnection().connection  # RealDictCursor configuré dans DBConnection
+        # DBConnection fournit une connexion (RealDictCursor configuré)
+        self._db = DBConnection()
 
-    # --- utilitaire pour extraire un attribut depuis l'objet Qrcode ---
-    def _get_attr_from_obj(self, obj: Any, attr: str):
+    @log
+    def creer_qrc(self, qrcode: Qrcode) -> bool:
         """
-        Tente plusieurs stratégies pour récupérer une valeur depuis l'objet métier :
-         1) propriété publique (ex: obj.id_qrcode)
-         2) getter get_<attr>()
-         3) attribut protégé _<attr>
-         4) attribut name-mangled _ClassName__<attr>
-        Retourne None si aucune valeur trouvée (ou si celle-ci est réellement None).
+        Insère un QRCode en base. Retourne True si création réussie.
+        (Si l'id est fourni dans qrcode.id_qrcode, on l'insère, sinon la DB le génèrera.)
         """
-        # 1) propriété / attribut direct
-        if hasattr(obj, attr):
-            return getattr(obj, attr)
+        try:
+            with self._db.connection as conn:
+                with conn.cursor() as cur:
+                    if qrcode.id_qrcode is not None:
+                        cur.execute(
+                            """
+                            INSERT INTO qrcodes (id_qrcode, url, id_proprietaire, date_creation, type, couleur, logo)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                            RETURNING id_qrcode;
+                            """,
+                            (
+                                qrcode.id_qrcode,
+                                qrcode.url,
+                                qrcode.id_proprietaire,
+                                qrcode.date_creation,
+                                qrcode.type,
+                                qrcode.couleur,
+                                qrcode.logo,
+                            ),
+                        )
+                    else:
+                        cur.execute(
+                            """
+                            INSERT INTO qrcodes (url, id_proprietaire, type, couleur, logo)
+                            VALUES (%s, %s, %s, %s, %s)
+                            RETURNING id_qrcode;
+                            """,
+                            (
+                                qrcode.url,
+                                qrcode.id_proprietaire,
+                                qrcode.date_creation,
+                                qrcode.type,
+                                qrcode.couleur,
+                                qrcode.logo,
+                            ),
+                        )
+                    res = cur.fetchone()
+                # commit pris en charge par le context manager ou explicitement selon impl
+                # ici on suppose que `with connection` commit automatiquement si pas d'exception
+            return bool(res)
+        except Exception as e:
+            logger.exception("Erreur lors de creer_qrc : %s", e)
+            return False
 
-        # 2) getter get_<attr>
-        getter_name = f"get_{attr}"
-        if hasattr(obj, getter_name) and callable(getattr(obj, getter_name)):
-            return getattr(obj, getter_name)()
+    @log
+    def trouver_qrc_par_id_user(self, id_user: str) -> List[Qrcode]:
+        """
+        Renvoie la liste des Qrcode pour un propriétaire donné.
+        """
+        try:
+            with self._db.connection as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        SELECT id_qrcode, url, id_proprietaire, date_creation, type, couleur, logo
+                        FROM qrcodes
+                        WHERE id_proprietaire = %s
+                        ORDER BY date_creation DESC;
+                        """,
+                        (id_user,),
+                    )
+                    rows = cur.fetchall()
+            qrcodes: List[Qrcode] = []
+            for row in rows:
+                q = Qrcode(
+                    id_qrcode=row["id_qrcode"],
+                    url=row["url"],
+                    id_proprietaire=row["id_proprietaire"],
+                    date_creation=row["date_creation"],
+                    type=row.get("type"),
+                    couleur=row.get("couleur"),
+                    logo=row.get("logo"),
+                )
+                qrcodes.append(q)
+            return qrcodes
+        except Exception as e:
+            logger.exception("Erreur lors de trouver_par_id : %s", e)
+            raise
+    
+    
+    @log
+    def trouver_qrc_par_id_qrc(self, id_qrcode: int) -> Qrcode | None:
+        """
+        Recherche un QR code à partir de son identifiant unique.
 
-        # 3) attribut protégé conventionnel
-        protected_name = f"_{attr}"
-        if hasattr(obj, protected_name):
-            return getattr(obj, protected_name)
+        Parameters
+        ----------
+        id_qrcode : int
+        Identifiant du QR code à rechercher.
 
-        # 4) name-mangled (class name needed)
-        cls_name = obj.__class__.__name__
-        mangled = f"_{cls_name}__{attr}"
-        if hasattr(obj, mangled):
-            return getattr(obj, mangled)
+        Returns
+        -------
+        Qrcode | None
+        L'objet Qrcode correspondant, ou None s'il n'existe pas.
+        """
+        try:
+            with DBConnection().connection as connection:
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        """
+                        SELECT id_qrcode, url, id_proprietaire, date_creation, type, couleur, logo
+                        FROM qrcodes
+                        WHERE id_qrcode = %(id_qrcode)s;
+                        """,
+                        {"id_qrcode": id_qrcode},
+                    )
+                    res = cursor.fetchone()
+        except Exception as e:
+            logging.info(f"Erreur lors de la recherche du QR code {id_qrcode} : {e}")
+            return None
 
-        # nothing found
+        if res:
+            return Qrcode(
+                id_qrcode=res["id_qrcode"],
+                url=res["url"],
+                id_proprietaire=res["id_proprietaire"],
+                date_creation=res["date_creation"],
+                type=res.get("type"),
+                couleur=res.get("couleur"),
+                logo=res.get("logo"),
+            )
         return None
 
-    # --- utilitaire pour construire un Qrcode depuis une ligne DB (dict) ---
-    def _row_to_qrcode(self, row: Dict[str, Any]) -> Qrcode:
-        return Qrcode(
-            id_qrcode=row["id_qrcode"],
-            url=row["url"],
-            id_proprietaire=row["id_proprietaire"],
-            date_creation=row["date_creation"],
-            type=row.get("type"),
-            couleur=row.get("couleur"),
-            logo=row.get("logo"),
-        )
 
-    # --- CREATE : insert et renvoie l'objet créé (avec id) ---
-    def creer_qrc(self, qrcode: Qrcode) -> Qrcode:
-        """
-        Insère un nouveau QRCode en base et renvoie l'objet persistant (avec id, date_creation).
-        Si l'objet Qrcode a déjà un id (rare), on l'insère avec cet id ; sinon la DB génère l'id.
-        """
-        try:
-            with self.conn.cursor() as cur:
-                provided_id = self._get_attr_from_obj(qrcode, "id_qrcode")
-                if provided_id is not None:
-                    sql = """
-                    INSERT INTO qrcodes (id_qrcode, url, id_proprietaire, date_creation, type, couleur, logo)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    RETURNING id_qrcode, url, id_proprietaire, date_creation, type, couleur, logo
-                    """
-                    params = (
-                        provided_id,
-                        self._get_attr_from_obj(qrcode, "url"),
-                        self._get_attr_from_obj(qrcode, "id_proprietaire"),
-                        self._get_attr_from_obj(qrcode, "date_creation"),
-                        self._get_attr_from_obj(qrcode, "type"),
-                        self._get_attr_from_obj(qrcode, "couleur"),
-                        self._get_attr_from_obj(qrcode, "logo"),
-                    )
-                else:
-                    sql = """
-                    INSERT INTO qrcodes (url, id_proprietaire, date_creation, type, couleur, logo)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    RETURNING id_qrcode, url, id_proprietaire, date_creation, type, couleur, logo
-                    """
-                    params = (
-                        self._get_attr_from_obj(qrcode, "url"),
-                        self._get_attr_from_obj(qrcode, "id_proprietaire"),
-                        self._get_attr_from_obj(qrcode, "date_creation"),
-                        self._get_attr_from_obj(qrcode, "type"),
-                        self._get_attr_from_obj(qrcode, "couleur"),
-                        self._get_attr_from_obj(qrcode, "logo"),
-                    )
 
-                cur.execute(sql, params)
-                row = cur.fetchone()
-            self.conn.commit()
-            if not row:
-                raise Exception("Insertion effectuée mais la base n'a pas renvoyé la ligne.")
-            return self._row_to_qrcode(row)
-
-        except Exception:
-            logger.exception("Erreur lors de creer_qrc")
-            try:
-                self.conn.rollback()
-            except Exception:
-                logger.exception("Rollback a échoué dans creer_qrc")
-            raise
-
-    # --- FIND by owner (ancienne trouver_par_id) ---
-    def trouver_par_id(self, id_user: str) -> List[Qrcode]:
-        """
-        Retourne la liste des QRCodes pour un propriétaire donné.
-        (Nom ancien : trouver_par_id ; garde le nom pour compatibilité)
-        """
-        try:
-            with self.conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT id_qrcode, url, id_proprietaire, date_creation, type, couleur, logo
-                    FROM qrcodes
-                    WHERE id_proprietaire = %s
-                    ORDER BY date_creation DESC
-                    """,
-                    (id_user,),
-                )
-                rows = cur.fetchall()
-            return [self._row_to_qrcode(row) for row in rows]
-        except Exception:
-            logger.exception("Erreur lors de trouver_par_id")
-            raise
-
-    # --- UPDATE (modification explicite) ---
+    @log
     def modifier_qrc(
         self,
         id_qrcode: Any,
@@ -160,75 +171,68 @@ class QRCodeDao:
         logo: Optional[str] = None,
     ) -> Qrcode:
         """
-        Modifie un QR code existant après vérification du propriétaire.
-        Retourne l'objet Qrcode mis à jour.
+        Modifie un QR code après vérification du propriétaire.
+        Retourne le Qrcode mis à jour ou lève QRCodeNotFoundError/UnauthorizedError.
         """
         try:
-            with self.conn.cursor() as cur:
-                # Vérifier existence et propriétaire
-                cur.execute("SELECT id_proprietaire FROM qrcodes WHERE id_qrcode = %s", (id_qrcode,))
-                row = cur.fetchone()
-                if not row:
-                    raise QRCodeNotFoundError(f"QR code {id_qrcode} introuvable.")
-                if row["id_proprietaire"] != id_user:
-                    raise UnauthorizedError("Seul le propriétaire peut modifier ce QR code.")
+            with self._db.connection as conn:
+                with conn.cursor() as cur:
+                    # Vérifier existence et propriétaire
+                    cur.execute(
+                        "SELECT id_proprietaire FROM qrcodes WHERE id_qrcode = %s;",
+                        (id_qrcode,),
+                    )
+                    row = cur.fetchone()
+                    if not row:
+                        raise QRCodeNotFoundError(f"QR code {id_qrcode} introuvable.")
+                    if row["id_proprietaire"] != id_user:
+                        raise UnauthorizedError("Seul le propriétaire peut modifier ce QR code.")
 
-                cur.execute(
-                    """
-                    UPDATE qrcodes
-                    SET url = COALESCE(%s, url),
-                        type = COALESCE(%s, type),
-                        couleur = COALESCE(%s, couleur),
-                        logo = COALESCE(%s, logo)
-                    WHERE id_qrcode = %s
-                    RETURNING id_qrcode, url, id_proprietaire, date_creation, type, couleur, logo
-                    """,
-                    (url, type_, couleur, logo, id_qrcode),
-                )
-                updated_row = cur.fetchone()
-
-            self.conn.commit()
-            if not updated_row:
-                # Très improbable : existait lors du SELECT mais pas après
-                raise QRCodeNotFoundError(
-                    f"QR code {id_qrcode} introuvable après tentative de mise à jour."
-                )
-            return self._row_to_qrcode(updated_row)
-
+                    # Mise à jour (on utilise COALESCE pour garder les valeurs non fournies)
+                    cur.execute(
+                        """
+                        UPDATE qrcodes
+                        SET url = COALESCE(%s, url),
+                            type = COALESCE(%s, type),
+                            couleur = COALESCE(%s, couleur),
+                            logo = COALESCE(%s, logo)
+                        WHERE id_qrcode = %s
+                        RETURNING id_qrcode, url, id_proprietaire, date_creation, type, couleur, logo;
+                        """,
+                        (url, type_, couleur, logo, id_qrcode),
+                    )
+                    updated = cur.fetchone()
+            if not updated:
+                raise QRCodeNotFoundError(f"QR code {id_qrcode} introuvable après tentative de mise à jour.")
+            # reconstruire l'objet métier et le renvoyer
+            return Qrcode(
+                id_qrcode=updated["id_qrcode"],
+                url=updated["url"],
+                id_proprietaire=updated["id_proprietaire"],
+                date_creation=updated["date_creation"],
+                type=updated.get("type"),
+                couleur=updated.get("couleur"),
+                logo=updated.get("logo"),
+            )
         except (QRCodeNotFoundError, UnauthorizedError):
-            try:
-                self.conn.rollback()
-            except Exception:
-                logger.exception("Rollback a échoué dans modifier_qrc (handled exception)")
+            # propager ces erreurs pour que le service puisse les traduire en 404/403
             raise
-        except Exception:
-            logger.exception("Erreur lors de modifier_qrc")
-            try:
-                self.conn.rollback()
-            except Exception:
-                logger.exception("Rollback a échoué dans modifier_qrc")
+        except Exception as e:
+            logger.exception("Erreur lors de modifier_qrc : %s", e)
             raise
-
-    # --- DELETE ---
+    
+    @log
     def supprimer(self, qrcode: Qrcode) -> bool:
         """
-        Supprime le QRCode donné (par id retourné par qrcode.id_qrcode ou get_id()).
-        Retourne True si une ligne a été effacée.
+        Supprime un QRCode par son identifiant. Retourne True si ligne supprimée.
         """
         try:
-            # on récupère l'id en tolérant plusieurs API d'objet
-            qid = self._get_attr_from_obj(qrcode, "id_qrcode")
-            if qid is None:
-                raise ValueError("Impossible de récupérer l'identifiant du Qrcode fourni.")
-            with self.conn.cursor() as cur:
-                cur.execute("DELETE FROM qrcodes WHERE id_qrcode = %s", (qid,))
-                deleted = cur.rowcount > 0
-            self.conn.commit()
+            qid = qrcode.id_qrcode
+            with self._db.connection as conn:
+                with conn.cursor() as cur:
+                    cur.execute("DELETE FROM qrcodes WHERE id_qrcode = %s;", (qid,))
+                    deleted = cur.rowcount > 0
             return bool(deleted)
-        except Exception:
-            logger.exception("Erreur lors de supprimer")
-            try:
-                self.conn.rollback()
-            except Exception:
-                logger.exception("Rollback a échoué dans supprimer")
-            raise
+        except Exception as e:
+            logger.exception("Erreur lors de supprimer : %s", e)
+            return False
