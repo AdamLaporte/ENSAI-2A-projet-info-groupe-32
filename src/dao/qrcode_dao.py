@@ -4,7 +4,7 @@ from typing import List, Optional, Any, Dict
 from utils.singleton import Singleton
 from utils.log_decorator import log
 
-from dao.db_connexion import DBConnection
+from dao.db_connection import DBConnection
 from business_object.qr_code import Qrcode
 
 logger = logging.getLogger(__name__)

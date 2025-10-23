@@ -1,7 +1,7 @@
 from typing import List, Optional
 from datetime import datetime
-from business_object.qrcode import Qrcode  # ta classe métier
-from dao.qrcode_dao import QrcodeDao
+from business_object.qr_code import Qrcode  # ta classe métier
+from dao.qrcode_dao import QRCodeDao
 
 
 class QRCodeNotFoundError(Exception):
@@ -17,7 +17,7 @@ class UnauthorizedError(Exception):
 class QRCodeService:
     """Service métier pour la gestion des QR codes."""
 
-    def __init__(self, dao: QrcodeDao):
+    def __init__(self, dao: QRCodeDao):
         self.dao = dao
 
     def creer_qrc(self, url: str, id_proprietaire: str,
