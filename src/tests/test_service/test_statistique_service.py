@@ -79,20 +79,20 @@ def test_trouver_par_id_qrcode_non_trouve():
 def test_modifier_statistique_ok():
     """Modification d'une statistique réussie"""
     # GIVEN
-    statistique = Statistique(id_qrcode=randint(1,9999), nombre_vue=1, date_des_vues="2025-10-10")
+    statistique = Statistique(id_qrcode=randint(1,9999), nombre_vue=1, date_des_vues=[date(2025,10,10)])
     StatistiqueDao().modifier_statistique = MagicMock(return_value=True)
 
     # WHEN
     res = StatistiqueService().modifier_statistique(statistique)
 
     # THEN
-    assert res.nombre_vue == 15
-    assert res.date_des_vues == "2025-10-10"
+    assert res.nombre_vue == 1
+    assert res.date_des_vues == [date(2025,10,10)]
 
 def test_modifier_statistique_echec():
     """Modification d'une statistique échouée"""
     # GIVEN
-    statistique = Statistique(id_qrcode="qrcode1", nombre_vue=15, date_des_vues="2025-10-10")
+    statistique = Statistique(id_qrcode=randint(1,9999), nombre_vue=1, date_des_vues=[date(2025,10,10)])
     StatistiqueDao().modifier_statistique = MagicMock(return_value=False)
 
     # WHEN
@@ -104,7 +104,7 @@ def test_modifier_statistique_echec():
 def test_supprimer_ok():
     """Suppression d'une statistique réussie"""
     # GIVEN
-    statistique = Statistique(id_qrcode="qrcode3", nombre_vue=7, date_des_vues="2025-10-03")
+    statistique = Statistique(id_qrcode=randint(1,9999), nombre_vue=7, date_des_vues=[date(2025,10,10)])
     StatistiqueDao().supprimer = MagicMock(return_value=True)
 
     # WHEN
@@ -116,7 +116,7 @@ def test_supprimer_ok():
 def test_supprimer_echec():
     """Suppression d'une statistique échouée"""
     # GIVEN
-    statistique = Statistique(id_qrcode="inexistant", nombre_vue=0, date_des_vues="2025-10-20")
+    statistique = Statistique(id_qrcode=randint(1,9999), nombre_vue=0, date_des_vues=[date(2025,10,20)])
     StatistiqueDao().supprimer = MagicMock(return_value=False)
 
     # WHEN
@@ -128,7 +128,7 @@ def test_supprimer_echec():
 def test_id_qrcode_deja_utilise_oui():
     """id_qrcode déjà utilisé"""
     # GIVEN
-    id_qrcode = "qrcode1"
+    id_qrcode = 1234
     StatistiqueDao().lister_tous = MagicMock(return_value=liste_statistiques)
 
     # WHEN
