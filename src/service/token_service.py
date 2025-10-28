@@ -40,19 +40,21 @@ class TokenService:
         )
         return nouveau_token if TokenDao().creer_token(nouveau_token) else None
 
-
     @log
-    def trouver_par_id(self, jeton) -> Token:
+    def existe_token(self, id_user):
+        pass
+    @log
+    def trouver_token_par_id(self, jeton) -> Token:
         """Trouver un token à partir de l'identifiant de l'utilisateur"""
         return TokenDao().trouver_token_par_id(jeton)
 
     @log
-    def modifier(self, token) -> Token:
+    def modifier_token(self, token) -> Token:
         """Modification d'un token """
         return token if TokenDao().modifier_token(token) else None
 
     @log
-    def supprimer(self, token) -> bool:
+    def supprimer_token(self, token) -> bool:
         """Supprimer un token"""
         return TokenDao().supprimer_token(token)
 

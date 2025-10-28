@@ -6,14 +6,14 @@ from utils.log_decorator import log
 from dao.db_connection import DBConnection
 
 from business_object.token import Token
-from business_object.utilisateur import Utilisateur as u
+from business_object.utilisateur import Utilisateur
 
 
 class TokenDao(metaclass=Singleton):
     """Classe contenant les méthodes pour accéder aux Tokens de la base de données"""
 
     @log
-    def creer_token(self, token: Token):
+    def creer_token(self, token: Token): 
         """Création d'un token dans la base de données
 
         Parameters
@@ -53,7 +53,7 @@ class TokenDao(metaclass=Singleton):
         return created
 
     @log
-    def trouver_token_par_id(self, u.id_user : str ):
+    def trouver_token_par_id(self, Utilisateur, id_user:str):
         """Trouver un token grâce à son id_user
 
         Parameters
@@ -71,8 +71,8 @@ class TokenDao(metaclass=Singleton):
                 with connection.cursor() as cursor:
                     cursor.execute(
                         "SELECT id_user, jeton, date_expiration "
-                        "FROM token WHERE id_token = %(id_token)s;",
-                        {"id_token": id_token},
+                        "FROM token WHERE id_user = %(id_user)s;",
+                        {"id_user": id_user},
                     )
                     res = cursor.fetchone()
         except Exception as e:
@@ -83,7 +83,7 @@ class TokenDao(metaclass=Singleton):
         if res:
             token = Token(
                 jeton=res["jeton"],
-                utilisateur=Utilisateur(id_user=res["id_user"]),
+                Utilisateur=Utilisateur(id_user=res["id_user"]),
                 date_expiration=res["date_expiration"],
             )
 
@@ -109,7 +109,7 @@ class TokenDao(metaclass=Singleton):
                 with conn.cursor() as cursor:
                     cursor.execute(
                         "DELETE FROM Token WHERE jeton = %(jeton)s;",
-                        {"jeton":Token.jeton}
+                        {"jeton": Token.jeton}
                     )
                     res = cursor.rowcount  # nombre de lignes affectées
         except Exception as e:
@@ -186,4 +186,4 @@ class TokenDao(metaclass=Singleton):
 
     @log
     def existe_token():
-
+        pass
