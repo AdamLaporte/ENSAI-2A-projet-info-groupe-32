@@ -6,40 +6,56 @@ from utils.securite import generer_token
 import tabulate
 import datetime
 
+import secrets
+import string
+
 
 class TokenService:
     """Classe contenant les méthodes de service pour la gestion des tokens"""
+    
+    def generer_jeton(longueur=32):
+    """ Génère un jeton d'authentification sécurisé.
+    
+    Attributs:
+    ----------
+        longueur (int): Longueur du jeton (par défaut 32 caractères)
+    
+    Returns:
+    --------
+        str: Jeton d'authentification aléatoire
+    """
+    # Utilise secrets pour une génération cryptographiquement sécurisée
+    caracteres = string.ascii_letters + string.digits
+    jeton = ''.join(secrets.choice(caracteres) for _ in range(longueur))
+    return jeton
+
 
     @log
-    def creer(self, utilisateur_id, expire_dans) -> Token:
+    def creer_token(self, id_user) -> Token:
         """Création d'un nouveau token pour un utilisateur"""
         nouveau_token = Token(
-            utilisateur_id=utilisateur_id,
-            token=generer_token(),
-            expire_dans=expire_dans
+            id_user=id_user,
+            jeton=generer_jeton(),
+            date_expiration = datetime.now() + timedelta(hours=1) #le jeton est valide une heure 
         )
-        return nouveau_token if TokenDao().creer(nouveau_token) else None
+        return nouveau_token if TokenDao().creer_token(nouveau_token) else None
 
 
     @log
-    def trouver_par_id(self, id_token) -> Token:
+    def trouver_par_id(self, jeton) -> Token:
         """Trouver un token à partir de l'identifiant de l'utilisateur"""
-        return TokenDao().trouver_par_id(id_token)
+        return TokenDao().trouver_token_par_id(jeton)
 
     @log
     def modifier(self, token) -> Token:
-        """Modification d'un token (ex. prolongation de validité)"""
-        return token if TokenDao().modifier(token) else None
+        """Modification d'un token """
+        return token if TokenDao().modifier_token(token) else None
 
     @log
     def supprimer(self, token) -> bool:
         """Supprimer un token"""
-        return TokenDao().supprimer(token)
+        return TokenDao().supprimer_token(token)
 
-    @log
-    def trouver_par_utilisateur_id(self, utilisateur_id) -> Token:
-        """Trouver un token actif pour un utilisateur donné"""
-        return TokenDao().trouver_par_utilisateur_id(utilisateur_id)
 
     @staticmethod
     @log

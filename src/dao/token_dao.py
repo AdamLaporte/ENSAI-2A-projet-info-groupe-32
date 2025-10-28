@@ -13,7 +13,7 @@ class TokenDao(metaclass=Singleton):
     """Classe contenant les méthodes pour accéder aux Tokens de la base de données"""
 
     @log
-    def creer_token(self, token: Token) -> bool:
+    def creer_token(self, token: Token):
         """Création d'un token dans la base de données
 
         Parameters
@@ -53,7 +53,7 @@ class TokenDao(metaclass=Singleton):
         return created
 
     @log
-    def trouver_token_par_id(self, u.id_user : str ) -> Token | None:
+    def trouver_token_par_id(self, u.id_user : str ):
         """Trouver un token grâce à son id_user
 
         Parameters
@@ -88,6 +88,7 @@ class TokenDao(metaclass=Singleton):
             )
 
         return token
+
     def supprimer_token(self, token: Token) -> bool:
         """
         Supprime un token de la base de données.
@@ -100,7 +101,8 @@ class TokenDao(metaclass=Singleton):
         Returns
         -------
         deleted : bool
-            True si la suppression a réussi, False sinon
+            True si la suppression a réussi
+            False sinon
         """
         try:
             with DBConnection().connection as conn:
