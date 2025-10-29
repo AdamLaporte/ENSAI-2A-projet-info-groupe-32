@@ -121,30 +121,31 @@ class QRCodeDao:
         """
         Retourne un Qrcode par id, ou None si introuvable.
         """
-        with self._db.connection as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT id_qrcode, url, id_proprietaire, date_creation, type_qrcode, couleur, logo
-                    FROM qrcode
-                    WHERE id_qrcode = %s
-                    """,
-                    (id_qrcode,),
-                )
-                row = cur.fetchone()
-                if not row:
-                    return None
-                return Qrcode(
-                    id_qrcode=row["id_qrcode"],
-                    url=row["url"],
-                    id_proprietaire=str(row["id_proprietaire"]),
-                    date_creation=row["date_creation"],
-                    type=row["type_qrcode"],
-                    couleur=row["couleur"],
-                    logo=row["logo"],
-                )
-                qrcodes.append(q)
-            return qrcodes
+        try:
+            with self._db.connection as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        SELECT id_qrcode, url, id_proprietaire, date_creation, type_qrcode, couleur, logo
+                        FROM qrcode
+                        WHERE id_qrcode = %s
+                        """,
+                        (id_qrcode,),
+                    )
+                    row = cur.fetchone()
+                    if not row:
+                        return None
+                    return Qrcode(
+                        id_qrcode=row["id_qrcode"],
+                        url=row["url"],
+                        id_proprietaire=str(row["id_proprietaire"]),
+                        date_creation=row["date_creation"],
+                        type=row["type_qrcode"],
+                        couleur=row["couleur"],
+                        logo=row["logo"],
+                    )
+                    qrcodes.append(q)
+                return qrcodes
         except Exception as e:
             logger.exception("Erreur lors de trouver_par_id : %s", e)
             raise
