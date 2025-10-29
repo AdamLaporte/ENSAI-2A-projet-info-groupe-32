@@ -20,7 +20,7 @@ class UnauthorizedError(Exception):
 
 class QRCodeDao:
     """
-    DAO simple pour la table `qrcodes`.
+    DAO pour la table `qrcodes`.
     Style : lecture via propriétés de Qrcode, méthodes d'écriture renvoyant bool,
     méthode de modification renvoyant l'objet mis à jour.
     """
@@ -30,54 +30,50 @@ class QRCodeDao:
         self._db = DBConnection()
 
     @log
-    def creer_qrc(self, qrcode: Qrcode) -> bool:
+    def creer_qrc(self, qrcode: Qrcode) -> Optional[Qrcode]:
         """
-        Insère un QRCode en base. Retourne True si création réussie.
-        (Si l'id est fourni dans qrcode.id_qrcode, on l'insère, sinon la DB le génèrera.)
+        Insère un QRCode en base et renvoie l'objet Qrcode créé avec id.
         """
         try:
             with self._db.connection as conn:
                 with conn.cursor() as cur:
-                    if qrcode.id_qrcode is not None:
-                        cur.execute(
-                            """
-                            INSERT INTO qrcodes (id_qrcode, url, id_proprietaire, date_creation, type, couleur, logo)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s)
-                            RETURNING id_qrcode;
-                            """,
-                            (
-                                qrcode.id_qrcode,
-                                qrcode.url,
-                                qrcode.id_proprietaire,
-                                qrcode.date_creation,
-                                qrcode.type,
-                                qrcode.couleur,
-                                qrcode.logo,
-                            ),
-                        )
-                    else:
-                        cur.execute(
-                            """
-                            INSERT INTO qrcodes (url, id_proprietaire, type, couleur, logo)
-                            VALUES (%s, %s, %s, %s, %s)
-                            RETURNING id_qrcode;
-                            """,
-                            (
-                                qrcode.url,
-                                qrcode.id_proprietaire,
-                                qrcode.date_creation,
-                                qrcode.type,
-                                qrcode.couleur,
-                                qrcode.logo,
-                            ),
-                        )
+                    cur.execute(
+                        """
+                        INSERT INTO qrcodes (url, id_proprietaire, type, couleur, logo)
+                        VALUES (%s, %s, %s, %s, %s)
+                        RETURNING id_qrcode, date_creation;
+                        """,
+                        (
+                            qrcode.url,
+                            qrcode.id_proprietaire,
+                            qrcode.type,
+                            qrcode.couleur,
+                            qrcode.logo,
+                        ),
+                    )
                     res = cur.fetchone()
-                # commit pris en charge par le context manager ou explicitement selon impl
-                # ici on suppose que `with connection` commit automatiquement si pas d'exception
-            return bool(res)
+                    if not res:
+                        return None
+
+                    # Supporte tuple OU dict selon le type de curseur
+                    if isinstance(res, dict):
+                        new_id = res["id_qrcode"]
+                        date_creation = res["date_creation"]
+                    else:
+                        new_id, date_creation = res
+
+                    #  Propriétés read-only : on met à jour les attributs privés
+                    qrcode._id_qrcode = new_id
+                    qrcode._date_creation = date_creation
+
+                # commit explicite (plus sûr selon ta config)
+                conn.commit()
+
+            return qrcode
+
         except Exception as e:
             logger.exception("Erreur lors de creer_qrc : %s", e)
-            return False
+            return None
 
     @log
     def trouver_qrc_par_id_user(self, id_user: str) -> List[Qrcode]:
@@ -113,8 +109,7 @@ class QRCodeDao:
         except Exception as e:
             logger.exception("Erreur lors de trouver_par_id : %s", e)
             raise
-    
-    
+
     @log
     def trouver_qrc_par_id_qrc(self, id_qrcode: int) -> Qrcode | None:
         """
@@ -143,7 +138,8 @@ class QRCodeDao:
                     )
                     res = cursor.fetchone()
         except Exception as e:
-            logging.info(f"Erreur lors de la recherche du QR code {id_qrcode} : {e}")
+            logging.info(
+                f"Erreur lors de la recherche du QR code {id_qrcode} : {e}")
             return None
 
         if res:
@@ -157,8 +153,6 @@ class QRCodeDao:
                 logo=res.get("logo"),
             )
         return None
-
-
 
     @log
     def modifier_qrc(
@@ -184,9 +178,11 @@ class QRCodeDao:
                     )
                     row = cur.fetchone()
                     if not row:
-                        raise QRCodeNotFoundError(f"QR code {id_qrcode} introuvable.")
+                        raise QRCodeNotFoundError(
+                            f"QR code {id_qrcode} introuvable.")
                     if row["id_proprietaire"] != id_user:
-                        raise UnauthorizedError("Seul le propriétaire peut modifier ce QR code.")
+                        raise UnauthorizedError(
+                            "Seul le propriétaire peut modifier ce QR code.")
 
                     # Mise à jour (on utilise COALESCE pour garder les valeurs non fournies)
                     cur.execute(
@@ -203,7 +199,8 @@ class QRCodeDao:
                     )
                     updated = cur.fetchone()
             if not updated:
-                raise QRCodeNotFoundError(f"QR code {id_qrcode} introuvable après tentative de mise à jour.")
+                raise QRCodeNotFoundError(
+                    f"QR code {id_qrcode} introuvable après tentative de mise à jour.")
             # reconstruire l'objet métier et le renvoyer
             return Qrcode(
                 id_qrcode=updated["id_qrcode"],
@@ -220,7 +217,7 @@ class QRCodeDao:
         except Exception as e:
             logger.exception("Erreur lors de modifier_qrc : %s", e)
             raise
-    
+
     @log
     def supprimer(self, qrcode: Qrcode) -> bool:
         """
@@ -230,7 +227,8 @@ class QRCodeDao:
             qid = qrcode.id_qrcode
             with self._db.connection as conn:
                 with conn.cursor() as cur:
-                    cur.execute("DELETE FROM qrcodes WHERE id_qrcode = %s;", (qid,))
+                    cur.execute(
+                        "DELETE FROM qrcodes WHERE id_qrcode = %s;", (qid,))
                     deleted = cur.rowcount > 0
             return bool(deleted)
         except Exception as e:

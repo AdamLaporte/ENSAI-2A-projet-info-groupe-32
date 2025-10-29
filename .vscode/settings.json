@@ -1,7 +1,7 @@
 {
     "ruff.lint.enable": true,
     "[python]": {
-        "editor.defaultFormatter": "mikoz.black-py",
+        "editor.defaultFormatter": "ms-python.autopep8",
         "editor.formatOnSave": true,
         "editor.insertSpaces": true,
         "editor.tabSize": 4,

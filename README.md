@@ -48,7 +48,7 @@ This very simple application includes a few elements that may help with the info
 
 This repository contains a large number of configuration files for setting the parameters of the various tools used.
 
-Normally, for the purposes of your project, you won't need to modify these files, except for `.env` and `requirements.txt`.
+
 
 
 | Item                       | Description                                                              |
