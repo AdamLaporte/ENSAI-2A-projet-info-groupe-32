@@ -16,7 +16,7 @@ class QRCodeService:
     def __init__(self, dao: 'QRCodeDao'):
         self.dao = dao
 
-    def creer_qrc(self, url: str, type_: bool, couleur: str, logo: str, id_proprietaire: str, id_qrcode: int) -> 'Qrcode':
+    def creer_qrc(self, url: str, type_qrcode: bool, couleur: str, logo: str, id_proprietaire: str, id_qrcode: int) -> 'Qrcode':
         """
         Crée un QRCode, le sauvegarde via le DAO et renvoie l'objet.
         id_qrcode doit être généré côté service ou client.
@@ -27,7 +27,7 @@ class QRCodeService:
             url=url,
             id_proprietaire=id_proprietaire,
             date_creation=datetime.utcnow(),
-            type=type_,
+            type_qrcode=type_qrcode,
             couleur=couleur,
             logo=logo
         )
@@ -47,7 +47,7 @@ class QRCodeService:
         return qrcode._Qrcode__id_proprietaire == id_user
 
     def modifier_qrc(self, id_qrcode: int, id_user: str,
-                     url: Optional[str] = None, type_: Optional[bool] = None,
+                     url: Optional[str] = None, type_qrcode: Optional[bool] = None,
                      couleur: Optional[str] = None, logo: Optional[str] = None) -> 'Qrcode':
         """
         Modifie un QRCode existant après vérification du propriétaire.
