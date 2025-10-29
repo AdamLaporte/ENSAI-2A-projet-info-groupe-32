@@ -1,8 +1,5 @@
 import logging
-from typing import List, Optional, Any, Dict
-
-from utils.singleton import Singleton
-from utils.log_decorator import log
+from typing import List, Optional
 
 from dao.db_connection import DBConnection
 from business_object.qr_code import Qrcode
@@ -20,219 +17,174 @@ class UnauthorizedError(Exception):
 
 class QRCodeDao:
     """
-    DAO simple pour la table `qrcodes`.
-    Style : lecture via propriétés de Qrcode, méthodes d'écriture renvoyant bool,
-    méthode de modification renvoyant l'objet mis à jour.
+    DAO pour la table `qrcode` (alignée sur init_db.sql).
+    - Lecture via propriétés de Qrcode
+    - Les méthodes de création et modification retournent l’objet (avec id)
+    - Les méthodes de suppression retournent un bool
     """
 
     def __init__(self):
-        # DBConnection fournit une connexion (RealDictCursor configuré)
         self._db = DBConnection()
 
-    @log
-    def creer_qrc(self, qrcode: Qrcode) -> bool:
+    def creer_qrc(self, qrcode: Qrcode) -> Qrcode:
         """
-        Insère un QRCode en base. Retourne True si création réussie.
-        (Si l'id est fourni dans qrcode.id_qrcode, on l'insère, sinon la DB le génèrera.)
+        Insère un QRCode en base et retourne l'objet avec id renseigné.
+        Colonne booléenne: type_qrcode (schéma).
         """
-        try:
-            with self._db.connection as conn:
-                with conn.cursor() as cur:
-                    if qrcode.id_qrcode is not None:
-                        cur.execute(
-                            """
-                            INSERT INTO qrcodes (id_qrcode, url, id_proprietaire, date_creation, type, couleur, logo)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s)
-                            RETURNING id_qrcode;
-                            """,
-                            (
-                                qrcode.id_qrcode,
-                                qrcode.url,
-                                qrcode.id_proprietaire,
-                                qrcode.date_creation,
-                                qrcode.type,
-                                qrcode.couleur,
-                                qrcode.logo,
-                            ),
-                        )
-                    else:
-                        cur.execute(
-                            """
-                            INSERT INTO qrcodes (url, id_proprietaire, type, couleur, logo)
-                            VALUES (%s, %s, %s, %s, %s)
-                            RETURNING id_qrcode;
-                            """,
-                            (
-                                qrcode.url,
-                                qrcode.id_proprietaire,
-                                qrcode.date_creation,
-                                qrcode.type,
-                                qrcode.couleur,
-                                qrcode.logo,
-                            ),
-                        )
-                    res = cur.fetchone()
-                # commit pris en charge par le context manager ou explicitement selon impl
-                # ici on suppose que `with connection` commit automatiquement si pas d'exception
-            return bool(res)
-        except Exception as e:
-            logger.exception("Erreur lors de creer_qrc : %s", e)
-            return False
-
-    @log
-    def trouver_qrc_par_id_user(self, id_user: str) -> List[Qrcode]:
-        """
-        Renvoie la liste des Qrcode pour un propriétaire donné.
-        """
-        try:
-            with self._db.connection as conn:
-                with conn.cursor() as cur:
+        with self._db.connection as conn:
+            with conn.cursor() as cur:
+                if qrcode.id_qrcode is not None:
                     cur.execute(
                         """
-                        SELECT id_qrcode, url, id_proprietaire, date_creation, type, couleur, logo
-                        FROM qrcodes
-                        WHERE id_proprietaire = %s
-                        ORDER BY date_creation DESC;
+                        INSERT INTO qrcode (id_qrcode, url, id_proprietaire, type_qrcode, couleur, logo)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                        RETURNING id_qrcode
                         """,
-                        (id_user,),
+                        (
+                            qrcode.id_qrcode,
+                            qrcode.url,
+                            int(qrcode.id_proprietaire),
+                            qrcode.type,
+                            qrcode.couleur,
+                            qrcode.logo,
+                        ),
                     )
-                    rows = cur.fetchall()
-            qrcodes: List[Qrcode] = []
-            for row in rows:
-                q = Qrcode(
+                else:
+                    cur.execute(
+                        """
+                        INSERT INTO qrcode (url, id_proprietaire, type_qrcode, couleur, logo)
+                        VALUES (%s, %s, %s, %s, %s)
+                        RETURNING id_qrcode
+                        """,
+                        (
+                            qrcode.url,
+                            int(qrcode.id_proprietaire),
+                            qrcode.type,
+                            qrcode.couleur,
+                            qrcode.logo,
+                        ),
+                    )
+                new_id = cur.fetchone()["id_qrcode"]
+                # Hydrate l’objet (accès interne assumé par ton modèle)
+                qrcode._id_qrcode = new_id  # type: ignore[attr-defined]
+                return qrcode
+
+    def supprimer_qrc(self, id_qrcode: int) -> bool:
+        """
+        Supprime un QRCode par id. Retourne True si une ligne supprimée.
+        """
+        with self._db.connection as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM qrcode WHERE id_qrcode = %s", (id_qrcode,))
+                return cur.rowcount > 0
+
+    def trouver_par_id(self, id_qrcode: int) -> Optional[Qrcode]:
+        """
+        Retourne un Qrcode par id, ou None si introuvable.
+        """
+        with self._db.connection as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id_qrcode, url, id_proprietaire, date_creation, type_qrcode, couleur, logo
+                    FROM qrcode
+                    WHERE id_qrcode = %s
+                    """,
+                    (id_qrcode,),
+                )
+                row = cur.fetchone()
+                if not row:
+                    return None
+                return Qrcode(
                     id_qrcode=row["id_qrcode"],
                     url=row["url"],
-                    id_proprietaire=row["id_proprietaire"],
+                    id_proprietaire=str(row["id_proprietaire"]),
                     date_creation=row["date_creation"],
-                    type=row.get("type"),
-                    couleur=row.get("couleur"),
-                    logo=row.get("logo"),
+                    type=row["type_qrcode"],
+                    couleur=row["couleur"],
+                    logo=row["logo"],
                 )
-                qrcodes.append(q)
-            return qrcodes
-        except Exception as e:
-            logger.exception("Erreur lors de trouver_par_id : %s", e)
-            raise
-    
-    
-    @log
-    def trouver_qrc_par_id_qrc(self, id_qrcode: int) -> Qrcode | None:
-        """
-        Recherche un QR code à partir de son identifiant unique.
 
-        Parameters
-        ----------
-        id_qrcode : int
-        Identifiant du QR code à rechercher.
-
-        Returns
-        -------
-        Qrcode | None
-        L'objet Qrcode correspondant, ou None s'il n'existe pas.
+    def lister_par_proprietaire(self, id_user: int) -> List[Qrcode]:
         """
-        try:
-            with DBConnection().connection as connection:
-                with connection.cursor() as cursor:
-                    cursor.execute(
-                        """
-                        SELECT id_qrcode, url, id_proprietaire, date_creation, type, couleur, logo
-                        FROM qrcodes
-                        WHERE id_qrcode = %(id_qrcode)s;
-                        """,
-                        {"id_qrcode": id_qrcode},
+        Liste les QR codes d’un propriétaire, triés par date_creation DESC.
+        """
+        with self._db.connection as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id_qrcode, url, id_proprietaire, date_creation, type_qrcode, couleur, logo
+                    FROM qrcode
+                    WHERE id_proprietaire = %s
+                    ORDER BY date_creation DESC
+                    """,
+                    (id_user,),
+                )
+                rows = cur.fetchall()
+                return [
+                    Qrcode(
+                        id_qrcode=r["id_qrcode"],
+                        url=r["url"],
+                        id_proprietaire=str(r["id_proprietaire"]),
+                        date_creation=r["date_creation"],
+                        type=r["type_qrcode"],
+                        couleur=r["couleur"],
+                        logo=r["logo"],
                     )
-                    res = cursor.fetchone()
-        except Exception as e:
-            logging.info(f"Erreur lors de la recherche du QR code {id_qrcode} : {e}")
-            return None
+                    for r in rows
+                ]
 
-        if res:
-            return Qrcode(
-                id_qrcode=res["id_qrcode"],
-                url=res["url"],
-                id_proprietaire=res["id_proprietaire"],
-                date_creation=res["date_creation"],
-                type=res.get("type"),
-                couleur=res.get("couleur"),
-                logo=res.get("logo"),
-            )
-        return None
-
-
-
-    @log
-    def modifier_qrc(
+    def mettre_a_jour(
         self,
-        id_qrcode: Any,
-        id_user: str,
+        id_qrcode: int,
         url: Optional[str] = None,
-        type_: Optional[bool] = None,
+        type_qrcode: Optional[bool] = None,
         couleur: Optional[str] = None,
         logo: Optional[str] = None,
-    ) -> Qrcode:
+    ) -> Optional[Qrcode]:
         """
-        Modifie un QR code après vérification du propriétaire.
-        Retourne le Qrcode mis à jour ou lève QRCodeNotFoundError/UnauthorizedError.
+        Met à jour les champs fournis et retourne l’objet mis à jour, ou None si id introuvable.
         """
-        try:
-            with self._db.connection as conn:
-                with conn.cursor() as cur:
-                    # Vérifier existence et propriétaire
-                    cur.execute(
-                        "SELECT id_proprietaire FROM qrcodes WHERE id_qrcode = %s;",
-                        (id_qrcode,),
-                    )
-                    row = cur.fetchone()
-                    if not row:
-                        raise QRCodeNotFoundError(f"QR code {id_qrcode} introuvable.")
-                    if row["id_proprietaire"] != id_user:
-                        raise UnauthorizedError("Seul le propriétaire peut modifier ce QR code.")
+        sets = []
+        params = []
+        if url is not None:
+            sets.append("url = %s")
+            params.append(url)
+        if type_qrcode is not None:
+            sets.append("type_qrcode = %s")
+            params.append(type_qrcode)
+        if couleur is not None:
+            sets.append("couleur = %s")
+            params.append(couleur)
+        if logo is not None:
+            sets.append("logo = %s")
+            params.append(logo)
 
-                    # Mise à jour (on utilise COALESCE pour garder les valeurs non fournies)
-                    cur.execute(
-                        """
-                        UPDATE qrcodes
-                        SET url = COALESCE(%s, url),
-                            type = COALESCE(%s, type),
-                            couleur = COALESCE(%s, couleur),
-                            logo = COALESCE(%s, logo)
-                        WHERE id_qrcode = %s
-                        RETURNING id_qrcode, url, id_proprietaire, date_creation, type, couleur, logo;
-                        """,
-                        (url, type_, couleur, logo, id_qrcode),
-                    )
-                    updated = cur.fetchone()
-            if not updated:
-                raise QRCodeNotFoundError(f"QR code {id_qrcode} introuvable après tentative de mise à jour.")
-            # reconstruire l'objet métier et le renvoyer
-            return Qrcode(
-                id_qrcode=updated["id_qrcode"],
-                url=updated["url"],
-                id_proprietaire=updated["id_proprietaire"],
-                date_creation=updated["date_creation"],
-                type=updated.get("type"),
-                couleur=updated.get("couleur"),
-                logo=updated.get("logo"),
-            )
-        except (QRCodeNotFoundError, UnauthorizedError):
-            # propager ces erreurs pour que le service puisse les traduire en 404/403
-            raise
-        except Exception as e:
-            logger.exception("Erreur lors de modifier_qrc : %s", e)
-            raise
-    
-    @log
-    def supprimer(self, qrcode: Qrcode) -> bool:
-        """
-        Supprime un QRCode par son identifiant. Retourne True si ligne supprimée.
-        """
-        try:
-            qid = qrcode.id_qrcode
-            with self._db.connection as conn:
-                with conn.cursor() as cur:
-                    cur.execute("DELETE FROM qrcodes WHERE id_qrcode = %s;", (qid,))
-                    deleted = cur.rowcount > 0
-            return bool(deleted)
-        except Exception as e:
-            logger.exception("Erreur lors de supprimer : %s", e)
-            return False
+        if not sets:
+            # Rien à mettre à jour → renvoyer l’état actuel
+            return self.trouver_par_id(id_qrcode)
+
+        params.append(id_qrcode)
+        with self._db.connection as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"""
+                    UPDATE qrcode
+                    SET {", ".join(sets)}
+                    WHERE id_qrcode = %s
+                    RETURNING id_qrcode, url, id_proprietaire, date_creation, type_qrcode, couleur, logo
+                    """,
+                    params,
+                )
+                row = cur.fetchone()
+                if not row:
+                    return None
+                return Qrcode(
+                    id_qrcode=row["id_qrcode"],
+                    url=row["url"],
+                    id_proprietaire=str(row["id_proprietaire"]),
+                    date_creation=row["date_creation"],
+                    type=row["type_qrcode"],
+                    couleur=row["couleur"],
+                    logo=row["logo"],
+                )

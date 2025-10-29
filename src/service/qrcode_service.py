@@ -41,7 +41,7 @@ class QRCodeService:
 
     def trouver_qrc_par_id_user(self, id_user: str) -> List[Qrcode]:
         """Retourne tous les QR codes appartenant à un utilisateur."""
-        return self.dao.trouver_qrc_par_id_user(id_user)
+        return self.dao.lister_par_proprietaire(int(id_user))
 
     def supprimer_qrc(self, id_qrcode: int, id_user: str) -> bool:
         """
@@ -69,7 +69,7 @@ class QRCodeService:
         return self.dao.modifier_qrc(
             id_qrcode=id_qrcode,
             url=url,
-            type_=type_,
+            type_=type_qrcode,
             couleur=couleur,
             logo=logo
         )
