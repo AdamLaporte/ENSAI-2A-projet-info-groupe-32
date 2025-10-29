@@ -112,24 +112,27 @@ class Qrcode:
             raise TypeError("Le logo doit être une chaîne (chemin/nom).")
         self._logo = l
 
-    # -------------------
-    # Utilitaires
-    # -------------------
-
     def to_dict(self) -> dict:
-        """Renvoie un dict correspondant aux colonnes DB / sérialisation."""
         return {
-            "id_qrcode": self._id_qrcode,
-            "url": self._url,
-            "id_proprietaire": self._id_proprietaire,
-            "date_creation": self._date_creation,
-            "type": self._type,
-            "couleur": self._couleur,
-            "logo": self._logo,
+        "id_qrcode": self.id_qrcode,
+        "url": self.url,
+        "id_proprietaire": self.id_proprietaire,
+        "date_creation": self.date_creation.isoformat() if self.date_creation else None,
+        "type": self.type,
+        "couleur": self.couleur,
+        "logo": self.logo,
         }
 
     def __repr__(self) -> str:
         return (
             f"Qrcode(id_qrcode={self._id_qrcode!r}, url={self._url!r}, "
             f"owner={self._id_proprietaire!r}, date_creation={self._date_creation!r})"
-        )
+        )    
+
+    # -------------------
+    # Utilitaires
+    # -------------------
+
+
+
+

@@ -122,16 +122,16 @@ def test_modifier_qrc_success(mock_db_conn):
     # Simpler: make a cursor whose fetchone behavior changes between calls.
     cm, cur = make_cm()
     # configure cur.fetchone to return first the select result, then the update result
-    cur.fetchone.side_effect = [ {"id_proprietaire": "u1"}, 
+    cur.fetchone.side_effect = [{"id_proprietaire": "u1"},
                                 {
-                                    "id_qrcode": 10,
+        "id_qrcode": 10,
                                     "url": "https://new",
                                     "id_proprietaire": "u1",
                                     "date_creation": datetime.utcnow(),
                                     "type": True,
                                     "couleur": "vert",
                                     "logo": "logo.png",
-                                } ]
+    }]
     fake_conn.cursor.return_value = cm
     fake_conn.__enter__.return_value = fake_conn
     mock_db_conn.return_value.connection = fake_conn
