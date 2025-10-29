@@ -78,7 +78,7 @@ classDiagram
     }
 
     class QRCodeDao {
-        +creer_qrc(QRCode): bool
+        +creer_qrc(QRCode): QRCode
         +trouver_qrc_par_id(id_user: str): list[QRCode]
         +supprimer(QRCode): bool
         +modifier(QRCode):QRCode

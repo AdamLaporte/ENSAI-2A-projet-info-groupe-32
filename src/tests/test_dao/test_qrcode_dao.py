@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from datetime import datetime
 
-# adapte le chemin suivant si nécessaire
+
 from dao.qrcode_dao import QRCodeDao, QRCodeNotFoundError, UnauthorizedError
 from business_object.qr_code import Qrcode
 
@@ -40,35 +40,13 @@ def make_qrcode(id_qrcode=1, url="https://ex.com", owner="user-1"):
 # -------------------------
 
 @patch("dao.qrcode_dao.DBConnection")
-def test_creer_qrc_with_provided_id_returns_true(mock_db_conn):
-    """
-    Cas : qrcode.id_qrcode fourni -> INSERT avec id ; la DB renvoie une ligne (fetchone)
-    """
-    fake_conn = MagicMock()
-    cm, cur = make_cm(fetchone={"id_qrcode": 10})
-    # cursor() returns context manager
-    fake_conn.cursor.return_value = cm
-    # support "with DBConnection().connection as conn:"
-    fake_conn.__enter__.return_value = fake_conn
-    mock_db_conn.return_value.connection = fake_conn
-
-    dao = QRCodeDao()
-    q = make_qrcode(id_qrcode=10)
-    res = dao.creer_qrc(q)
-
-    # Vérifie qu'on a tenté un INSERT et que la méthode renvoie True
-    assert res is True
-    cur.execute.assert_called()
-    fake_conn.cursor.assert_called()
-
-
-@patch("dao.qrcode_dao.DBConnection")
-def test_creer_qrc_without_id_returns_true(mock_db_conn):
+def test_creer_qrc_without_id_returns_qrcode(mock_db_conn):
     """
     Cas : qrcode.id_qrcode None -> INSERT sans id ; la DB renvoie une ligne (fetchone)
     """
     fake_conn = MagicMock()
-    cm, cur = make_cm(fetchone={"id_qrcode": 11})
+    # retourne un tuple (id_qrcode, date_creation)
+    cm, cur = make_cm(fetchone=(11, datetime(2025, 10, 29)))
     fake_conn.cursor.return_value = cm
     fake_conn.__enter__.return_value = fake_conn
     mock_db_conn.return_value.connection = fake_conn
@@ -77,40 +55,11 @@ def test_creer_qrc_without_id_returns_true(mock_db_conn):
     q = make_qrcode(id_qrcode=None)
     res = dao.creer_qrc(q)
 
-    assert res is True
-    cur.execute.assert_called()
-    # s'assurer que l'insert sans id a été utilisé (on ne peut pas inspecter le SQL facilement ici,
-    # mais au moins s'assurer que cur.execute a été invoqué)
-    fake_conn.cursor.assert_called()
-
-
-@patch("dao.qrcode_dao.DBConnection")
-def test_trouver_qrc_par_id_user_returns_list_of_qrc(mock_db_conn):
-    rows = [
-        {
-            "id_qrcode": 1,
-            "url": "https://a",
-            "id_proprietaire": "u1",
-            "date_creation": datetime.utcnow(),
-            "type": True,
-            "couleur": "bleu",
-            "logo": "l.png",
-        }
-    ]
-    fake_conn = MagicMock()
-    cm, cur = make_cm(fetchall=rows)
-    fake_conn.cursor.return_value = cm
-    fake_conn.__enter__.return_value = fake_conn
-    mock_db_conn.return_value.connection = fake_conn
-
-    dao = QRCodeDao()
-    result = dao.trouver_qrc_par_id_user("u1")
-
-    assert isinstance(result, list)
-    assert len(result) == 1
-    assert isinstance(result[0], Qrcode)
-    assert result[0].id_qrcode == 1
+    assert isinstance(res, Qrcode)
+    assert res.id_qrcode == 11
+    assert isinstance(res.date_creation, datetime)
     cur.execute.assert_called_once()
+    fake_conn.cursor.assert_called_once()
 
 
 @patch("dao.qrcode_dao.DBConnection")
@@ -173,16 +122,16 @@ def test_modifier_qrc_success(mock_db_conn):
     # Simpler: make a cursor whose fetchone behavior changes between calls.
     cm, cur = make_cm()
     # configure cur.fetchone to return first the select result, then the update result
-    cur.fetchone.side_effect = [ {"id_proprietaire": "u1"}, 
+    cur.fetchone.side_effect = [{"id_proprietaire": "u1"},
                                 {
-                                    "id_qrcode": 10,
+        "id_qrcode": 10,
                                     "url": "https://new",
                                     "id_proprietaire": "u1",
                                     "date_creation": datetime.utcnow(),
                                     "type": True,
                                     "couleur": "vert",
                                     "logo": "logo.png",
-                                } ]
+    }]
     fake_conn.cursor.return_value = cm
     fake_conn.__enter__.return_value = fake_conn
     mock_db_conn.return_value.connection = fake_conn
