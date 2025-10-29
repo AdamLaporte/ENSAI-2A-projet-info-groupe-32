@@ -82,38 +82,30 @@ class QRCodeDao:
                 with conn.cursor() as cur:
                     cur.execute(
                         """
-                        INSERT INTO qrcode (id_qrcode, url, id_proprietaire, type_qrcode, couleur, logo)
-                        VALUES (%s, %s, %s, %s, %s, %s)
-                        RETURNING id_qrcode
+                        SELECT id_qrcode, url, id_proprietaire, date_creation, type, couleur, logo
+                        FROM qrcodes
+                        WHERE id_proprietaire = %s
+                        ORDER BY date_creation DESC;
                         """,
-                        (
-                            qrcode.id_qrcode,
-                            qrcode.url,
-                            int(qrcode.id_proprietaire),
-                            qrcode.type,
-                            qrcode.couleur,
-                            qrcode.logo,
-                        ),
+                        (id_user,),
                     )
-                else:
-                    cur.execute(
-                        """
-                        INSERT INTO qrcode (url, id_proprietaire, type_qrcode, couleur, logo)
-                        VALUES (%s, %s, %s, %s, %s)
-                        RETURNING id_qrcode
-                        """,
-                        (
-                            qrcode.url,
-                            int(qrcode.id_proprietaire),
-                            qrcode.type,
-                            qrcode.couleur,
-                            qrcode.logo,
-                        ),
-                    )
-                new_id = cur.fetchone()["id_qrcode"]
-                # Hydrate l’objet (accès interne assumé par ton modèle)
-                qrcode._id_qrcode = new_id  # type: ignore[attr-defined]
-                return qrcode
+                    rows = cur.fetchall()
+            qrcodes: List[Qrcode] = []
+            for row in rows:
+                q = Qrcode(
+                    id_qrcode=row["id_qrcode"],
+                    url=row["url"],
+                    id_proprietaire=row["id_proprietaire"],
+                    date_creation=row["date_creation"],
+                    type=row.get("type"),
+                    couleur=row.get("couleur"),
+                    logo=row.get("logo"),
+                )
+                qrcodes.append(q)
+            return qrcodes
+        except Exception as e:
+            logger.exception("Erreur lors de trouver_par_id : %s", e)
+            raise
 
     def supprimer_qrc(self, id_qrcode: int) -> bool:
         """
@@ -121,7 +113,8 @@ class QRCodeDao:
         """
         with self._db.connection as conn:
             with conn.cursor() as cur:
-                cur.execute("DELETE FROM qrcode WHERE id_qrcode = %s", (id_qrcode,))
+                cur.execute(
+                    "DELETE FROM qrcode WHERE id_qrcode = %s", (id_qrcode,))
                 return cur.rowcount > 0
 
     def trouver_qrc_par_id_qrc(self, id_qrcode: int) -> Optional[Qrcode]:
@@ -156,63 +149,18 @@ class QRCodeDao:
             logger.exception("Erreur lors de trouver_par_id : %s", e)
             raise
 
-    
-    def lister_par_proprietaire(self, id_user: int) -> List[Qrcode]:
-        """
-        Liste les QR codes d’un propriétaire, triés par date_creation DESC.
-        """
-        with self._db.connection as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT id_qrcode, url, id_proprietaire, date_creation, type_qrcode, couleur, logo
-                    FROM qrcode
-                    WHERE id_proprietaire = %s
-                    ORDER BY date_creation DESC
-                    """,
-                    (id_user,),
-                )
-                rows = cur.fetchall()
-                return [
-                    Qrcode(
-                        id_qrcode=r["id_qrcode"],
-                        url=r["url"],
-                        id_proprietaire=str(r["id_proprietaire"]),
-                        date_creation=r["date_creation"],
-                        type=r["type_qrcode"],
-                        couleur=r["couleur"],
-                        logo=r["logo"],
-                    )
-                    res = cursor.fetchone()
-        except Exception as e:
-            logging.info(
-                f"Erreur lors de la recherche du QR code {id_qrcode} : {e}")
-            return None
-
-        if res:
-            return Qrcode(
-                id_qrcode=res["id_qrcode"],
-                url=res["url"],
-                id_proprietaire=res["id_proprietaire"],
-                date_creation=res["date_creation"],
-                type=res.get("type"),
-                couleur=res.get("couleur"),
-                logo=res.get("logo"),
-            )
-        return None
-
     @log
-    def modifier_qrc(
-        self,
-        id_qrcode: int,
-        url: Optional[str] = None,
-        type_qrcode: Optional[bool] = None,
-        couleur: Optional[str] = None,
-        logo: Optional[str] = None,
-    ) -> Optional[Qrcode]:
+    def modifier_qrc(self,
+                     id_qrcode: int,
+                     url: Optional[str] = None,
+                     type_qrcode: Optional[bool] = None,
+                     couleur: Optional[str] = None,
+                     logo: Optional[str] = None,
+                     ) -> Optional[Qrcode]:
         """
         Met à jour les champs fournis et retourne l’objet mis à jour, ou None si id introuvable.
         """
+
         try:
             with self._db.connection as conn:
                 with conn.cursor() as cur:
