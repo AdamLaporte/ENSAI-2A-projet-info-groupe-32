@@ -74,12 +74,14 @@ classDiagram
         +trouver_qrc_par_id_user(id_user : str): list[QRCode]
         +supprimer_qrc(QRCode): bool
         +verifier_proprietaire(QRCode, id_user: str): bool
+        +trouver_qrc_par_id_qrc(id_user : str): Qrcode | None
     }
 
     class QRCodeDao {
         +creer_qrc(QRCode): bool
         +trouver_qrc_par_id(id_user: str): list[QRCode]
         +supprimer(QRCode): bool
+        +modifier(QRCode):QRCode
     }
     
 

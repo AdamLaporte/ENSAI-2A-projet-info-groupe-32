@@ -1,61 +1,73 @@
 from typing import List, Optional
+from datetime import datetime
+from business_object.qr_code import Qrcode  # ta classe métier
+from dao.qrcode_dao import QRCodeDao
 
-# Exceptions métier
+
 class QRCodeNotFoundError(Exception):
+    """Erreur levée si le QR code n'existe pas."""
     pass
+
 
 class UnauthorizedError(Exception):
+    """Erreur levée si l'utilisateur n'est pas le propriétaire du QR code."""
     pass
 
-class QRCodeService:
-    """
-    Service métier pour gérer les QR codes.
-    Utilise un DAO pour la persistance (PostgreSQL ici).
-    """
 
-    def __init__(self, dao: 'QRCodeDao'):
+class QRCodeService:
+    """Service métier pour la gestion des QR codes."""
+
+    def __init__(self, dao: QRCodeDao):
         self.dao = dao
 
-    def creer_qrc(self, url: str, type_qrcode: bool, couleur: str, logo: str, id_proprietaire: str, id_qrcode: int) -> 'Qrcode':
+    def creer_qrc(self, url: str, id_proprietaire: str,
+                  type_qrcode: bool = False, couleur: Optional[str] = None,
+                  logo: Optional[str] = None) -> Qrcode:
         """
-        Crée un QRCode, le sauvegarde via le DAO et renvoie l'objet.
-        id_qrcode doit être généré côté service ou client.
+        Crée un QR code et le sauvegarde via le DAO.
+        L'identifiant est généré automatiquement par la base.
         """
-        from datetime import datetime
-        q = Qrcode(
-            id_qrcode=id_qrcode,
+        qrcode = Qrcode(
+            id_qrcode=None,
             url=url,
             id_proprietaire=id_proprietaire,
             date_creation=datetime.utcnow(),
-            type_qrcode=type_qrcode,
-            couleur=couleur,
+            type=type_qrcode,
+            couleur=couleur or "noir",
             logo=logo
         )
-        self.dao.créer_qrc(q)
-        return q
+        created_qr = self.dao.creer_qrc(qrcode)
+        return created_qr
 
-    def trouver_qrc_par_id_user(self, id_user: str) -> List['Qrcode']:
-        """Retourne la liste des QRCodes appartenant à l’utilisateur."""
-        return self.dao.trouver_par_id(id_user)
+    def trouver_qrc_par_id_user(self, id_user: str) -> List[Qrcode]:
+        """Retourne tous les QR codes appartenant à un utilisateur."""
+        return self.dao.trouver_qrc_par_id_user(id_user)
 
-    def supprimer_qrc(self, qrcode: 'Qrcode') -> bool:
-        """Supprime un QRCode via le DAO."""
-        return self.dao.supprimer(qrcode)
-
-    def verifier_proprietaire(self, qrcode: 'Qrcode', id_user: str) -> bool:
-        """Vérifie que l'utilisateur est bien le propriétaire du QRCode."""
-        return qrcode._Qrcode__id_proprietaire == id_user
+    def supprimer_qrc(self, id_qrcode: int, id_user: str) -> bool:
+        """
+        Supprime un QR code après vérification du propriétaire.
+        """
+        qr = self.dao.trouver_qrc_par_id_qrc(id_qrcode)
+        if not qr:
+            raise QRCodeNotFoundError(f"QR code {id_qrcode} introuvable.")
+        if qr.id_proprietaire != id_user:
+            raise UnauthorizedError("Suppression non autorisée.")
+        return self.dao.supprimer_qrc(qr)
 
     def modifier_qrc(self, id_qrcode: int, id_user: str,
                      url: Optional[str] = None, type_qrcode: Optional[bool] = None,
-                     couleur: Optional[str] = None, logo: Optional[str] = None) -> 'Qrcode':
+                     couleur: Optional[str] = None, logo: Optional[str] = None) -> Qrcode:
         """
-        Modifie un QRCode existant après vérification du propriétaire.
-        Lève QRCodeNotFoundError ou UnauthorizedError si problème.
+        Modifie un QR code existant après vérification du propriétaire.
         """
+        qr = self.dao.trouver_qrc_par_id(id_qrcode)
+        if not qr:
+            raise QRCodeNotFoundError(f"QR code {id_qrcode} introuvable.")
+        if qr.id_proprietaire != id_user:
+            raise UnauthorizedError("Modification non autorisée.")
+
         return self.dao.modifier_qrc(
             id_qrcode=id_qrcode,
-            id_user=id_user,
             url=url,
             type_=type_,
             couleur=couleur,
