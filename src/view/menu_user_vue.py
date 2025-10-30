@@ -1,5 +1,6 @@
 # src/view/menu_user_vue.py
 from InquirerPy import inquirer
+import os
 
 from view.vue_abstraite import VueAbstraite
 from view.session import Session
@@ -10,7 +11,7 @@ from dao.db_connection import DBConnection
 
 
 class MenuUtilisateurVue(VueAbstraite):
-    """Menu utilisateur: session, mes QR codes, stats de mes QR, déconnexion"""
+    """Menu utilisateur: session, mes QR codes, stats de mes QR, création, déconnexion"""
 
     def _get_current_user(self):
         # Centralise la récupération de l'utilisateur depuis la Session
@@ -26,6 +27,7 @@ class MenuUtilisateurVue(VueAbstraite):
                 "Infos de session",
                 "Lister mes QR codes",
                 "Voir statistiques d'un de MES QR",
+                "Créer un QR code",
                 "Se déconnecter",
             ],
         ).execute()
@@ -134,6 +136,88 @@ class MenuUtilisateurVue(VueAbstraite):
                     return MenuUtilisateurVue("\n".join(lignes))
                 except Exception as e:
                     return MenuUtilisateurVue(f"Erreur lors de la récupération des statistiques: {e}")
+
+            case "Créer un QR code":
+                try:
+                    # 1) Vérifier l'utilisateur connecté
+                    user = self._get_current_user()
+                    if user is None:
+                        return MenuUtilisateurVue("Non connecté.")
+                    id_user = getattr(user, "id_user", None)
+                    if not id_user:
+                        return MenuUtilisateurVue("Impossible de déterminer l'id utilisateur.")
+
+                    # 2) Saisies
+                    url = inquirer.text(message="URL cible du QR : ").execute().strip()
+                    if not url:
+                        return MenuUtilisateurVue("URL vide, opération annulée.")
+
+                    couleurs = ["black", "blue", "red", "green", "purple", "teal", "orange", "gray"]
+                    couleur = inquirer.select(
+                        message="Couleur du QR : ",
+                        choices=couleurs,
+                        default="black",
+                    ).execute()
+
+                    logo = inquirer.text(message="Chemin du logo (optionnel, Enter pour passer) : ").execute().strip()
+                    logo = logo if logo else None
+
+                    # 3) Création en base via service
+                    qsvc = QRCodeService(QRCodeDao())
+                    created = qsvc.creer_qrc(
+                        url=url,
+                        id_proprietaire=str(id_user),
+                        couleur=couleur,
+                        logo=logo,
+                    )
+
+                    # 4) Génération de l'image PNG (locale) ENCODANT L'URL DE SCAN
+                    try:
+                        import qrcode
+
+                        # URL de scan de l'API, avec l'id du QR créé
+                        scan_url = f"https://user-id2774-358651-0.user.lab.sspcloud.fr/proxy/8000/scan/{created.id_qrcode}"
+
+                        qrgen = qrcode.QRCode(
+                            version=None,
+                            error_correction=qrcode.constants.ERROR_CORRECT_M,
+                            box_size=10,
+                            border=4,
+                        )
+                        qrgen.add_data(scan_url)
+                        qrgen.make(fit=True)
+                        img = qrgen.make_image(fill_color=couleur, back_color="white")
+
+                        out_dir = os.getenv("QR_OUTPUT_DIR", "qrcodes_out")
+                        os.makedirs(out_dir, exist_ok=True)
+                        file_name = f"qrcode_{created.id_qrcode}.png"
+                        out_path = os.path.join(out_dir, file_name)
+                        img.save(out_path)
+
+                        lignes = [
+                            "QR code créé avec succès:",
+                            f"- id: {created.id_qrcode}",
+                            f"- url finale (redirection): {created.url}",
+                            f"- url encodée (scan API): {scan_url}",
+                            f"- couleur: {created.couleur}",
+                            f"- logo: {created.logo or 'aucun'}",
+                            f"- image: {out_path}",
+                        ]
+                        return MenuUtilisateurVue("\n".join(lignes))
+                    except ImportError:
+                        # Librairie non installée, mais la création en base a réussi
+                        lignes = [
+                            "QR code créé (image non générée car 'qrcode' non installée):",
+                            f"- id: {created.id_qrcode}",
+                            f"- url finale (redirection): {created.url}",
+                            f"- url encodée (scan API): https://user-id2774-358651-0.user.lab.sspcloud.fr/proxy/8000/scan/{created.id_qrcode}",
+                            f"- couleur: {created.couleur}",
+                            f"- logo: {created.logo or 'aucun'}",
+                        ]
+                        return MenuUtilisateurVue("\n".join(lignes))
+
+                except Exception as e:
+                    return MenuUtilisateurVue(f"Erreur lors de la création du QR: {e}")
 
         # Par défaut on reste sur le menu
         return self
