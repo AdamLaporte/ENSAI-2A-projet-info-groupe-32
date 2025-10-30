@@ -1,32 +1,31 @@
+# src/view/connexion/connexion_vue.py
 from InquirerPy import inquirer
 
 from view.vue_abstraite import VueAbstraite
 from view.session import Session
-
-from service.joueur_service import JoueurService
-
+from service.utilisateur_service import UtilisateurService
 
 class ConnexionVue(VueAbstraite):
-    """Vue de Connexion (saisie de pseudo et mdp)"""
+    """Vue de Connexion (saisie de nom utilisateur et mot de passe)"""
 
     def choisir_menu(self):
-        # Demande à l'utilisateur de saisir pseudo et mot de passe
-        pseudo = inquirer.text(message="Entrez votre pseudo : ").execute()
-        mdp = inquirer.secret(message="Entrez votre mot de passe :").execute()
+        # Saisie
+        nom_user = inquirer.text(message="Entrez votre nom d'utilisateur : ").execute()
+        mdp = inquirer.secret(message="Entrez votre mot de passe : ").execute()
 
-        # Appel du service pour trouver le joueur
-        joueur = JoueurService().se_connecter(pseudo, mdp)
+        # Authentification via le service
+        user = UtilisateurService().se_connecter(nom_user, mdp)
 
-        # Si le joueur a été trouvé à partir des ses identifiants de connexion
-        if joueur:
-            message = f"Vous êtes connecté sous le pseudo {joueur.pseudo}"
-            Session().connexion(joueur)
+        if user:
+            # Message et session
+            message = f"Vous êtes connecté en tant que {getattr(user, 'nom_user', nom_user)}"
+            Session().connexion(user)
 
-            from view.menu_joueur_vue import MenuJoueurVue
+            # Navigation vers le menu utilisateur
+            from view.menu_user_vue import MenuUtilisateurVue 
+            return MenuUtilisateurVue(message)
 
-            return MenuJoueurVue(message)
-
-        message = "Erreur de connexion (pseudo ou mot de passe invalide)"
+        # Échec -> retour accueil avec message
+        message = "Erreur de connexion (nom d'utilisateur ou mot de passe invalide)"
         from view.accueil.accueil_vue import AccueilVue
-
         return AccueilVue(message)

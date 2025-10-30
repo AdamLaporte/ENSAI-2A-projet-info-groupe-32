@@ -1,35 +1,37 @@
+# src/view/session.py
 from datetime import datetime
-
 from utils.singleton import Singleton
 
-
 class Session(metaclass=Singleton):
-    """Stocke les données liées à une session.
-    Cela permet par exemple de connaitre le joueur connecté à tout moment
-    depuis n'importe quelle classe.
-    Sans cela, il faudrait transmettre ce joueur entre les différentes vues.
-    """
+    """Session applicative pour l'utilisateur connecté"""
 
     def __init__(self):
-        """Création de la session"""
-        self.joueur = None
-        self.debut_connexion = None
+        self.user = None            # objet utilisateur/user connecté
+        self.debut_connexion = None   # horodatage lisible
 
-    def connexion(self, joueur):
-        """Enregistement des données en session"""
-        self.joueur = joueur
+    def connexion(self, user):
+        """Enregistre l'utilisateur/user en session avec un horodatage"""
+        self.user = user
         self.debut_connexion = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
     def deconnexion(self):
-        """Suppression des données de la session"""
-        self.joueur = None
+        """Purge la session"""
+        self.user = None
         self.debut_connexion = None
 
     def afficher(self) -> str:
-        """Afficher les informations de connexion"""
+        """Retourne un résumé lisible de la session"""
         res = "Actuellement en session :\n"
         res += "-------------------------\n"
-        for att in list(self.__dict__.items()):
-            res += f"{att[0]} : {att[1]}\n"
-
+        # Essaye d'afficher un identifiant parlant si disponible
+        nom = None
+        if self.user is not None:
+            # Priorité aux attributs utilisés dans ton modèle Utilisateur
+            # (nom_user dans src/business_object/utilisateur.py),
+            # puis alternatives si besoin.
+            nom = (
+                getattr(self.user, "nom_user", None)
+            )
+        res += f"utilisateur: {nom if nom else self.user}\n"
+        res += f"debut_connexion : {self.debut_connexion}\n"
         return res

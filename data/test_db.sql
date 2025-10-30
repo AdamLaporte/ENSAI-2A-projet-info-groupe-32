@@ -2,8 +2,7 @@
 -- Exécuter tout le fichier:
 
 -- psql -h postgresql-495411.user-id2774 -p 5432 -U user-id2774 -d defaultdb -f data/test_db.sql
-
-
+--  APPUYER SUR Q POUR QUITTER
 
 
 -- dump_db.sql — Aperçu lisible des données du schéma 'projet'
