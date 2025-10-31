@@ -18,6 +18,16 @@ class MenuUtilisateurVue(VueAbstraite):
         sess = Session()
         return getattr(sess, "user", None) or getattr(sess, "joueur", None) or getattr(sess, "utilisateur", None)
 
+    def _build_scan_url(self, qr_id: int) -> str:
+        """
+        Construit l'URL de scan à afficher dans le terminal.
+        Priorité à SCAN_BASE_URL (ton endpoint /scan), sinon TRACKING_BASE_URL.
+        """
+        scan_base = os.getenv("SCAN_BASE_URL")
+        tracking_base = os.getenv("TRACKING_BASE_URL", "https://monapi.example.com/r")
+        base = (scan_base or tracking_base).rstrip("/")
+        return f"{base}/{qr_id}"
+
     def choisir_menu(self):
         print("\n" + "-" * 50 + "\nMenu Utilisateur\n" + "-" * 50 + "\n")
 
@@ -121,8 +131,12 @@ class MenuUtilisateurVue(VueAbstraite):
                             )
                             rows = cur.fetchall() or []
 
+                    # 4) Construire et afficher aussi l'URL de l'API de scan pour ce QR
+                    scan_url = self._build_scan_url(id_qr)
+
                     titre = f"Statistiques de votre QR #{id_qr}"
                     lignes = [titre, "-" * len(titre)]
+                    lignes.append(f"URL de scan API: {scan_url}")
                     lignes.append(f"Total vues: {int(total) if total is not None else 0}")
                     lignes.append(f"Première vue: {premiere if premiere else 'N/A'}")
                     lignes.append(f"Dernière vue: {derniere if derniere else 'N/A'}")
@@ -139,7 +153,6 @@ class MenuUtilisateurVue(VueAbstraite):
 
             case "Créer un QR code":
                 try:
-                    # 1) Vérifier l'utilisateur connecté
                     user = self._get_current_user()
                     if user is None:
                         return MenuUtilisateurVue("Non connecté.")
@@ -147,7 +160,6 @@ class MenuUtilisateurVue(VueAbstraite):
                     if not id_user:
                         return MenuUtilisateurVue("Impossible de déterminer l'id utilisateur.")
 
-                    # 2) Saisies
                     url = inquirer.text(message="URL cible du QR : ").execute().strip()
                     if not url:
                         return MenuUtilisateurVue("URL vide, opération annulée.")
@@ -162,7 +174,6 @@ class MenuUtilisateurVue(VueAbstraite):
                     logo = inquirer.text(message="Chemin du logo (optionnel, Enter pour passer) : ").execute().strip()
                     logo = logo if logo else None
 
-                    # 3) Création en base via service
                     qsvc = QRCodeService(QRCodeDao())
                     created = qsvc.creer_qrc(
                         url=url,
@@ -171,51 +182,19 @@ class MenuUtilisateurVue(VueAbstraite):
                         logo=logo,
                     )
 
-                    # 4) Génération de l'image PNG (locale) ENCODANT L'URL DE SCAN
-                    try:
-                        import qrcode
-
-                        # URL de scan de l'API, avec l'id du QR créé
-                        scan_url = f"https://user-id2774-358651-0.user.lab.sspcloud.fr/proxy/8000/scan/{created.id_qrcode}"
-
-                        qrgen = qrcode.QRCode(
-                            version=None,
-                            error_correction=qrcode.constants.ERROR_CORRECT_M,
-                            box_size=10,
-                            border=4,
-                        )
-                        qrgen.add_data(scan_url)
-                        qrgen.make(fit=True)
-                        img = qrgen.make_image(fill_color=couleur, back_color="white")
-
-                        out_dir = os.getenv("QR_OUTPUT_DIR", "qrcodes_out")
-                        os.makedirs(out_dir, exist_ok=True)
-                        file_name = f"qrcode_{created.id_qrcode}.png"
-                        out_path = os.path.join(out_dir, file_name)
-                        img.save(out_path)
-
-                        lignes = [
-                            "QR code créé avec succès:",
-                            f"- id: {created.id_qrcode}",
-                            f"- url finale (redirection): {created.url}",
-                            f"- url encodée (scan API): {scan_url}",
-                            f"- couleur: {created.couleur}",
-                            f"- logo: {created.logo or 'aucun'}",
-                            f"- image: {out_path}",
-                        ]
-                        return MenuUtilisateurVue("\n".join(lignes))
-                    except ImportError:
-                        # Librairie non installée, mais la création en base a réussi
-                        lignes = [
-                            "QR code créé (image non générée car 'qrcode' non installée):",
-                            f"- id: {created.id_qrcode}",
-                            f"- url finale (redirection): {created.url}",
-                            f"- url encodée (scan API): https://user-id2774-358651-0.user.lab.sspcloud.fr/proxy/8000/scan/{created.id_qrcode}",
-                            f"- couleur: {created.couleur}",
-                            f"- logo: {created.logo or 'aucun'}",
-                        ]
-                        return MenuUtilisateurVue("\n".join(lignes))
-
+                    # Le service a déjà généré et sauvegardé l'image encodant l'URL de scan
+                    scan_url = created._scan_url if hasattr(created, "_scan_url") else self._build_scan_url(created.id_qrcode)
+                    lignes = [
+                        "QR code créé avec succès:",
+                        f"- id: {created.id_qrcode}",
+                        f"- url finale (redirection): {created.url}",
+                        f"- url encodée (scan API): {scan_url}",
+                        f"- couleur: {created.couleur}",
+                        f"- logo: {created.logo or 'aucun'}",
+                        f"- image: {getattr(created, '_image_path', 'N/A')}",
+                        f"- image publique: {getattr(created, '_image_url', 'N/A')}",
+                    ]
+                    return MenuUtilisateurVue("\n".join(lignes))
                 except Exception as e:
                     return MenuUtilisateurVue(f"Erreur lors de la création du QR: {e}")
 

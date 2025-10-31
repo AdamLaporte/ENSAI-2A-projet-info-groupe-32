@@ -8,7 +8,7 @@ import os
 # assume env/config
 QR_OUTPUT_DIR = os.getenv("QRCODE_OUTPUT_DIR", "static/qrcodes")
 TRACKING_BASE = os.getenv("TRACKING_BASE_URL", "https://monapi.example.com/r")
-
+SCAN_BASE = os.getenv("SCAN_BASE_URL", "https://user-id2774-358651-0.user.lab.sspcloud.fr/proxy/8000/scan")
 
 class QRCodeNotFoundError(Exception):
     """Erreur levée si le QR code n'existe pas."""
@@ -26,10 +26,15 @@ class QRCodeService:
     def __init__(self, dao: QRCodeDao):
         self.dao = dao
 
-    def creer_qrc(self, url: str, id_proprietaire: str,
-                  type_: bool = True, couleur: Optional[str] = None,
-                  logo: Optional[str] = None) -> Optional[Qrcode]:
-
+    def creer_qrc(
+        self,
+        url: str,
+        id_proprietaire: str,
+        type_: bool = True,
+        couleur: Optional[str] = None,
+        logo: Optional[str] = None,
+    ) -> Optional[Qrcode]:
+        # 1) Créer en base
         qrcode = Qrcode(
             id_qrcode=None,
             url=url,
@@ -39,13 +44,16 @@ class QRCodeService:
             couleur=couleur,
             logo=logo,
         )
-
         created_qr = self.dao.creer_qrc(qrcode)
         if not created_qr:
             raise RuntimeError("Échec de création du QR code en base")
 
-        tracking_url = f"{TRACKING_BASE}/{created_qr.id_qrcode}"
+        # 2) Construire l’URL de tracking/scan
+        #    Priorité à SCAN_BASE_URL si fournie (ton endpoint /scan/{id}); sinon TRACKING_BASE
+        base = SCAN_BASE or TRACKING_BASE
+        tracking_url = f"{base.rstrip('/')}/{created_qr.id_qrcode}"
 
+        # 3) Générer et sauvegarder l'image encodant l’URL de scan
         saved_path = generate_and_save_qr_png(
             tracking_url,
             out_dir=QR_OUTPUT_DIR,
@@ -58,9 +66,10 @@ class QRCodeService:
         public_url = filepath_to_public_url(saved_path)
         created_qr._image_path = saved_path
         created_qr._image_url = public_url
+        created_qr._scan_url = tracking_url
 
-    # (optionnel) persister le chemin image dans la base
-    # self.dao.update_image_path(created_qr.id_qrcode, public_url)
+        # (optionnel) persister public_url côté base
+        # self.dao.update_image_path(created_qr.id_qrcode, public_url)
 
         return created_qr
 

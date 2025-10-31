@@ -7,6 +7,12 @@ from pydantic import BaseModel
 from typing import Optional
 from dotenv import load_dotenv
 
+
+# ------------------------------------
+# si app bloqué par un port :
+# pkill -f "uvicorn" ou pkill -f "python.*app.py" depuis le terminal de l’environnement. 
+# ------------------------------------
+
 load_dotenv()  # charge le .env dans os.environ
 
 from service.qrcode_service import QRCodeService
