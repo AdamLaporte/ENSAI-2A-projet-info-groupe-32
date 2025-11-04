@@ -26,6 +26,14 @@ Cette approche permet de responsabiliser chaque membre, tout en gardant une coh√
 ---
  
 
- faire un bouton retour pour le terminal 
+faire un bouton retour pour le terminal 
 mettre en variable les ports 
-renvoyer une image par l'api ou le lien de l'image 
+renvoyer une image par l'api 
+
+a faire : 
+relecture syntaxe, doc code propre 
+adapter les tests 
+token 
+qrcode non suivi 
+rajoute adresse ip toutes donnees possible via les requetes http
+rapport

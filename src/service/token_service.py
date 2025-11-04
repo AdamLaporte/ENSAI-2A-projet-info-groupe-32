@@ -1,9 +1,8 @@
 from utils.log_decorator import log
 from dao.token_dao import TokenDao
 from business_object.token import Token
-from utils.securite import generer_token
 
-import tabulate
+
 import datetime
 
 import secrets
@@ -14,22 +13,22 @@ class TokenService:
     """Classe contenant les méthodes de service pour la gestion des tokens"""
     
     def generer_jeton(longueur=32):
-         """ Génère un jeton d'authentification sécurisé.
+        """ Génère un jeton d'authentification sécurisé.
     
-    Attributs:
-    ----------
+        Attributs:
+        ----------
         longueur :int
             Longueur du jeton (par défaut 32 caractères)
     
-    Returns:
-    --------
+        Returns:
+        --------
         str
             Jeton d'authentification aléatoire
-    """
-    # Utilise secrets pour une génération cryptographiquement sécurisée
-    caracteres = string.ascii_letters + string.digits
-    jeton = ''.join(secrets.choice(caracteres) for _ in range(longueur))
-    return jeton
+        """
+        # Utilise secrets pour une génération cryptographiquement sécurisée
+        caracteres = string.ascii_letters + string.digits
+        jeton = ''.join(secrets.choice(caracteres) for _ in range(longueur))
+        return jeton
 
 
     @log

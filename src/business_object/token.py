@@ -1,5 +1,5 @@
 from datetime import datetime
-from src.business_object.utilisateur import Utilisateur as u
+from business_object.utilisateur import Utilisateur as u
 
 
 class Token:
@@ -16,7 +16,7 @@ class Token:
         date d'expiration du jeton (privé)
     """
 
-    def __init__(self, jeton: str, u : Utilisateur, date_expiration : datetime ): #comment j'importe u 
+    def __init__(self, jeton: str, u, date_expiration : datetime ): #comment j'importe u 
         """Constructeur"""
         self._jeton = jeton
         self._id_user = u.id_user

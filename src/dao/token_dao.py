@@ -187,7 +187,7 @@ class TokenDao(metaclass=Singleton):
 
     @log
     def existe_token(jeton):
-         """Vérifie si un token existe dans la base de données
+        """ Vérifie si un token existe dans la base de données
 
         Attributs 
         ----------
@@ -200,11 +200,11 @@ class TokenDao(metaclass=Singleton):
             True si le token existe
             False sinon
         """
-        try :
+        try:
             with DBConnection().connection as connection:
                 with connection.cursor() as cursor:
                     cursor.execute(
-                        "SELECT 1 FROM token WHERE jeton = %(jeton)s LIMIT 1;",
+                        "SELECT token FROM token WHERE jeton = %(jeton)s;",
                         {"jeton": jeton},
                     )
                     res = cursor.fetchone()
