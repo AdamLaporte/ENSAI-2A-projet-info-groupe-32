@@ -19,6 +19,7 @@ classDiagram
     }
 
     class Statistique {
+        +id_stat : int
         +id_qrcode: int
         +nombre_vue: str
         +date_des_vues: list[date]
