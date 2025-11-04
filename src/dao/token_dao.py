@@ -16,7 +16,7 @@ class TokenDao(metaclass=Singleton):
     def creer_token(self, token: Token): 
         """Création d'un token dans la base de données
 
-        Parameters
+        Attributs 
         ----------
         token : Token
 
@@ -26,6 +26,7 @@ class TokenDao(metaclass=Singleton):
             True si la création est un succès
             False sinon
         """
+        #difference entre attributs et parameters ?
         res = None
         try:
             with DBConnection().connection as connection:
@@ -53,12 +54,12 @@ class TokenDao(metaclass=Singleton):
         return created
 
     @log
-    def trouver_token_par_id(self, Utilisateur, id_user:str):
+    def trouver_token_par_id(self, Utilisateur, id_user:str): #comment j'importe utilisateur 
         """Trouver un token grâce à son id_user
 
-        Parameters
+        Attributs
         ----------
-        u.id_user : str
+        u.id_user : int
             identifiant du token à trouver
 
         Returns
@@ -93,7 +94,7 @@ class TokenDao(metaclass=Singleton):
         """
         Supprime un token de la base de données.
 
-        Parameters
+        Attributs
         ----------
         token : Token
             Le token à supprimer
@@ -128,7 +129,7 @@ class TokenDao(metaclass=Singleton):
         Vérifie si un token est encore valide en termes de date d'expiration.
         Si le token est expiré, il est supprimé de la base de données.
 
-        Parameters
+        Attributs
         ----------
         token : Token
             Le token à vérifier
@@ -158,7 +159,7 @@ class TokenDao(metaclass=Singleton):
     def trouver_id_user_par_token(self, jeton: str) -> str | None:
         """Trouver l'id_user associé à un jeton
 
-        Parameters
+        Attribut
         ----------
         jeton : str
             Le jeton à rechercher
