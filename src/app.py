@@ -58,7 +58,7 @@ async def creer_qrc(data: QRCodeCreateModel):
         created = qrcode_service.creer_qrc(
             url=data.url,
             id_proprietaire=data.id_proprietaire,
-            #type_qrcode=data.type_qrcode,
+            type_=data.type_qrcode, # --- MODIFIÉ : Décommenté pour passer le type
             couleur=data.couleur,
             logo=data.logo,
         )  # renvoie l'objet avec id
@@ -115,7 +115,7 @@ async def supprimer_qrcode(id_qrcode: int, id_user: str):
 async def scan_qrcode(id_qrcode: int, request: Request):
     """
     Lorsqu'un utilisateur scanne le QR code :
-    - on enregistre une statistique (date, +1)
+    - on enregistre une statistique (date, +1) SI le QR est 'suivi'
     - puis on redirige vers l'URL réelle
     """
     try:
@@ -123,6 +123,16 @@ async def scan_qrcode(id_qrcode: int, request: Request):
         qr = qrcode_service.dao.trouver_par_id(id_qrcode)
         if not qr:
             raise HTTPException(status_code=404, detail="QR code introuvable")
+
+        # --- MODIFIÉ : Vérifier si le QR code est suivi ---
+        # Si 'type' est False (ou None), c'est un QR classique
+        if not getattr(qr, 'type', False):
+            logger.info(f"Scan NON-SUIVI pour QR {id_qrcode}. Redirection directe.")
+            return RedirectResponse(url=qr.url, status_code=307)
+        # --- FIN DE LA MODIFICATION ---
+
+        # Si on arrive ici, le QR est suivi. On enregistre le scan.
+        logger.info(f"Scan SUIVI pour QR {id_qrcode}. Enregistrement...")
 
         # Informations client (optionnel pour logs)
         user_agent = request.headers.get("user-agent", "inconnu")
@@ -206,6 +216,11 @@ async def stats_qrcode(id_qrcode: int, detail: bool = True):
     qr = qrcode_service.dao.trouver_par_id(id_qrcode)
     if not qr:
         raise HTTPException(status_code=404, detail="QR code introuvable")
+        
+    # --- AJOUT : Ne pas renvoyer de stats si le QR n'est pas suivi ---
+    if not getattr(qr, 'type', False):
+        raise HTTPException(status_code=404, detail="Les statistiques ne sont pas activées pour ce QR code.")
+    # --- FIN AJOUT ---
 
     with DBConnection().connection as conn:
         with conn.cursor() as cur:
