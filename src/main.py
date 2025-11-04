@@ -40,8 +40,3 @@ if __name__ == "__main__":
     print("----------------------------------")
     print("Au revoir")
     logging.info("Fin de l'application")
-
-
-
-
-
