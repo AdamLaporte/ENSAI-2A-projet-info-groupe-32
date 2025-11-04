@@ -53,10 +53,12 @@ CREATE INDEX IF NOT EXISTS idx_stat_id_qrcode ON statistique(id_qrcode);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_stat_qrcode_date ON statistique(id_qrcode, date_des_vues);
 
 -- Journal optionnel des scans (si tu souhaites garder le log détaillé)
+-- MODIFIÉ: Renommé 'ip' en 'client_host' pour correspondre à app.py
 CREATE TABLE IF NOT EXISTS logs_scan (
   id_scan SERIAL PRIMARY KEY,
   id_qrcode INT NOT NULL REFERENCES qrcode(id_qrcode) ON DELETE CASCADE,
-  ip TEXT,
+  client_host TEXT,
   user_agent TEXT,
   date_scan TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE INDEX IF NOT EXISTS idx_logs_scan_id_qrcode ON logs_scan(id_qrcode);

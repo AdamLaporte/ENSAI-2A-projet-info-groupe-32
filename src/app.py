@@ -58,7 +58,7 @@ async def creer_qrc(data: QRCodeCreateModel):
         created = qrcode_service.creer_qrc(
             url=data.url,
             id_proprietaire=data.id_proprietaire,
-            type_=data.type_qrcode, # --- MODIFIÉ : Décommenté pour passer le type
+            type_=data.type_qrcode, # <-- MODIFIÉ: On passe le type
             couleur=data.couleur,
             logo=data.logo,
         )  # renvoie l'objet avec id
@@ -86,6 +86,7 @@ async def qrcodes_par_utilisateur(id_user: str):
     """Lister tous les QR codes d’un utilisateur"""
     try:
         qrs = qrcode_service.trouver_qrc_par_id_user(id_user)
+        # S'assurer que to_dict() est appelé sur chaque objet Qrcode
         return [q.to_dict() for q in qrs]
     except HTTPException:
         raise
@@ -115,7 +116,7 @@ async def supprimer_qrcode(id_qrcode: int, id_user: str):
 async def scan_qrcode(id_qrcode: int, request: Request):
     """
     Lorsqu'un utilisateur scanne le QR code :
-    - on enregistre une statistique (date, +1) SI le QR est 'suivi'
+    - on enregistre une statistique (date, +1) si le QR est 'suivi'
     - puis on redirige vers l'URL réelle
     """
     try:
@@ -125,23 +126,21 @@ async def scan_qrcode(id_qrcode: int, request: Request):
             raise HTTPException(status_code=404, detail="QR code introuvable")
 
         # --- MODIFIÉ : Vérifier si le QR code est suivi ---
-        # Si 'type' est False (ou None), c'est un QR classique
-        if not getattr(qr, 'type', False):
-            logger.info(f"Scan NON-SUIVI pour QR {id_qrcode}. Redirection directe.")
+        # Si le type est False (non-suivi), on redirige sans compter
+        if qr.type is False:
+            logger.info(f"Scan NON enregistré (QR non-suivi) pour QRCode {id_qrcode}")
             return RedirectResponse(url=qr.url, status_code=307)
         # --- FIN DE LA MODIFICATION ---
-
-        # Si on arrive ici, le QR est suivi. On enregistre le scan.
-        logger.info(f"Scan SUIVI pour QR {id_qrcode}. Enregistrement...")
 
         # Informations client (optionnel pour logs)
         user_agent = request.headers.get("user-agent", "inconnu")
         client_host = request.client.host if request.client else "inconnu"
-        date_vue = datetime.utcnow()
+        date_vue = datetime.utcnow() # Date ET heure
 
         # Enregistrement dans la table statistique (UPsert journalier)
         with DBConnection().connection as conn:
             with conn.cursor() as cur:
+                # 1. Mise à jour de la table agrégée (par jour)
                 cur.execute(
                     """
                     INSERT INTO statistique (id_qrcode, nombre_vue, date_des_vues)
@@ -149,10 +148,20 @@ async def scan_qrcode(id_qrcode: int, request: Request):
                     ON CONFLICT (id_qrcode, date_des_vues)
                     DO UPDATE SET nombre_vue = statistique.nombre_vue + 1;
                     """,
-                    (id_qrcode, date_vue.date()),
+                    (id_qrcode, date_vue.date()), # On utilise .date() ici
                 )
 
-        logger.info(f"Scan enregistré pour QRCode {id_qrcode} depuis {client_host} ({user_agent})")
+                # --- MODIFIÉ : Insérer dans le journal détaillé (avec l'heure) ---
+                cur.execute(
+                    """
+                    INSERT INTO logs_scan (id_qrcode, client_host, user_agent, date_scan)
+                    VALUES (%s, %s, %s, %s);
+                    """,
+                    (id_qrcode, client_host, user_agent, date_vue), # On utilise date_vue (datetime complet)
+                )
+                # --- FIN DE LA MODIFICATION ---
+
+        logger.info(f"Scan ENREGISTRÉ (QR suivi) pour QRCode {id_qrcode} depuis {client_host} ({user_agent})")
 
         # Redirection vers l’URL cible
         return RedirectResponse(url=qr.url, status_code=307)
@@ -211,20 +220,21 @@ async def stats_qrcode(id_qrcode: int, detail: bool = True):
     - premiere_vue: date de première vue
     - derniere_vue: date de dernière vue
     - par_jour: détail par jour (si detail=true)
+    - scans_recents: log des scans individuels (si detail=true)
     """
     # Vérifie que le QR existe
     qr = qrcode_service.dao.trouver_par_id(id_qrcode)
     if not qr:
         raise HTTPException(status_code=404, detail="QR code introuvable")
-        
-    # --- AJOUT : Ne pas renvoyer de stats si le QR n'est pas suivi ---
-    if not getattr(qr, 'type', False):
-        raise HTTPException(status_code=404, detail="Les statistiques ne sont pas activées pour ce QR code.")
-    # --- FIN AJOUT ---
+
+    # --- MODIFIÉ : Vérifier si le QR code est suivi ---
+    if qr.type is False:
+        raise HTTPException(status_code=404, detail="Statistiques non disponibles pour un QR code non-suivi.")
+    # --- FIN DE LA MODIFICATION ---
 
     with DBConnection().connection as conn:
         with conn.cursor() as cur:
-            # Agrégats
+            # Agrégats (Table 'statistique')
             cur.execute(
                 """
                 SELECT
@@ -246,6 +256,7 @@ async def stats_qrcode(id_qrcode: int, detail: bool = True):
             }
 
             if detail:
+                # Stats par jour (Table 'statistique')
                 cur.execute(
                     """
                     SELECT date_des_vues, nombre_vue
@@ -260,6 +271,26 @@ async def stats_qrcode(id_qrcode: int, detail: bool = True):
                     {"date": r["date_des_vues"].isoformat(), "vues": int(r["nombre_vue"])}
                     for r in rows
                 ]
+
+                # --- AJOUTÉ : Récupérer les scans récents (avec heure) ---
+                # (Table 'logs_scan')
+                cur.execute(
+                    """
+                    SELECT date_scan, client_host
+                    FROM logs_scan
+                    WHERE id_qrcode = %s
+                    ORDER BY date_scan DESC
+                    LIMIT 50
+                    """, # On limite aux 50 plus récents
+                    (id_qrcode,),
+                )
+                logs = cur.fetchall() or []
+                # Ajoute la nouvelle clé "scans_recents" à la réponse JSON
+                result["scans_recents"] = [
+                    {"timestamp": log["date_scan"].isoformat(), "client": log["client_host"]}
+                    for log in logs
+                ]
+                # --- FIN DE L'AJOUT ---
 
     return result
 
@@ -280,5 +311,8 @@ async def index():
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 5000))
-    logger.info(f"✅ Serveur lancé sur 0.0.0.0:{port} avec ROOT_PATH={root_path}")
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    # S'assure que root_path est bien lu au démarrage
+    app_root_path = os.getenv("ROOT_PATH", "") 
+    logger.info(f"✅ Serveur lancé sur 0.0.0.0:{port} avec ROOT_PATH='{app_root_path}'")
+    uvicorn.run(app, host="0.0.0.0", port=port, root_path=app_root_path)
+

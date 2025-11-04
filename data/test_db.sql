@@ -56,6 +56,19 @@ SELECT
   MIN(s.date_des_vues) AS premiere_vue,
   MAX(s.date_des_vues) AS derniere_vue
 FROM statistique s
-JOIN qrcode q ON q.id_qrcode = s.id_qrcode
+RIGHT JOIN qrcode q ON q.id_qrcode = s.id_qrcode
+WHERE q.type_qrcode = TRUE -- N'agréger que les QR suivis
 GROUP BY s.id_qrcode, q.url
 ORDER BY s.id_qrcode;
+
+-- 6) AJOUTÉ: Journal détaillé des scans (avec heure)
+SELECT
+  l.id_scan,
+  l.id_qrcode,
+  q.url,
+  l.date_scan,
+  l.client_host,
+  l.user_agent
+FROM logs_scan l
+JOIN qrcode q ON q.id_qrcode = l.id_qrcode
+ORDER BY l.date_scan DESC;

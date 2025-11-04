@@ -4,6 +4,7 @@ SET search_path TO projet;
 BEGIN;
 
 -- Nettoyage optionnel (si tu veux repartir propre)
+TRUNCATE TABLE logs_scan RESTART IDENTITY CASCADE; -- AJOUTÉ
 TRUNCATE TABLE statistique RESTART IDENTITY CASCADE;
 TRUNCATE TABLE qrcode RESTART IDENTITY CASCADE;
 TRUNCATE TABLE token RESTART IDENTITY CASCADE;
@@ -39,7 +40,7 @@ FROM (VALUES
 
   -- adam (2)
   ('https://github.com/',                  'adam',    TRUE,  'black'),
-  ('https://www.ensae.fr/',                'adam',    FALSE, 'black'),
+  ('https://www.ensae.fr/',                'adam',    FALSE, 'black'), -- QR non-suivi
 
   -- ilona (1)
   ('https://www.insee.fr/fr/accueil',      'ilona',   TRUE,  'black')
@@ -68,8 +69,7 @@ FROM (VALUES
   ('https://github.com/',                  DATE '2025-10-02', 16),
   ('https://github.com/',                  DATE '2025-10-04',  7),
 
-  ('https://www.ensae.fr/',                DATE '2025-10-02',  4),
-  ('https://www.ensae.fr/',                DATE '2025-10-05', 11),
+  -- Note: Pas de stats pour 'https://www.ensae.fr/' car il est non-suivi (type=FALSE)
 
   -- ilona: INSEE
   ('https://www.insee.fr/fr/accueil',      DATE '2025-10-01',  5),
@@ -78,4 +78,22 @@ FROM (VALUES
 ) AS s(url, date_des_vues, nombre_vue)
 JOIN urls u ON u.url = s.url;
 
+-- AJOUTÉ : Exemples de logs de scans (avec heure)
+WITH urls AS (SELECT id_qrcode, url FROM qrcode)
+INSERT INTO logs_scan (id_qrcode, client_host, user_agent, date_scan)
+SELECT u.id_qrcode, l.client_host, l.user_agent, l.date_scan
+FROM (VALUES
+  -- Scans pour 'https://github.com/' (adam)
+  ('https://github.com/', '192.168.1.10', 'Mozilla/5.0 (iPhone...)', TIMESTAMPTZ '2025-10-04 08:15:30Z'),
+  ('https://github.com/', '192.168.1.10', 'Mozilla/5.0 (iPhone...)', TIMESTAMPTZ '2025-10-04 09:20:11Z'),
+  ('https://github.com/', '10.0.0.5',     'Mozilla/5.0 (Android...)', TIMESTAMPTZ '2025-10-04 14:45:01Z'),
+
+  -- Scans pour 'https://ensai.fr' (raphael)
+  ('https://ensai.fr',    '193.51.184.1', 'Mozilla/5.0 (Windows...)', TIMESTAMPTZ '2025-10-05 11:10:05Z'),
+  ('https://ensai.fr',    '193.51.184.1', 'Mozilla/5.0 (Windows...)', TIMESTAMPTZ '2025-10-05 11:10:45Z')
+) AS l(url, client_host, user_agent, date_scan)
+JOIN urls u ON u.url = l.url;
+
+
 COMMIT;
+

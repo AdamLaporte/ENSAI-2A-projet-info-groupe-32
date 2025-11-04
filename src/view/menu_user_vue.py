@@ -2,6 +2,7 @@ from InquirerPy import inquirer
 import os
 import requests  # Ajout pour les requêtes HTTP
 import json      # Ajout pour formater le payload
+from datetime import datetime # Ajout pour parser les timestamps
 
 from view.vue_abstraite import VueAbstraite
 from view.session import Session
@@ -40,6 +41,17 @@ class MenuUtilisateurVue(VueAbstraite):
         if not iso_string: return 'N/A'
         try: return iso_string.split('T')[0]
         except Exception: return iso_string
+
+    # --- NOUVEL HELPER POUR FORMATER DATE ET HEURE ---
+    def _format_datetime(self, iso_string):
+        if not iso_string: return 'N/A'
+        try:
+            # Parse la date ISO complète
+            dt = datetime.fromisoformat(iso_string)
+            # Formate en "Le 04/11/2025 à 15:50:30"
+            return dt.strftime("Le %d/%m/%Y à %H:%M:%S")
+        except Exception:
+            return iso_string
 
 
     def choisir_menu(self):
@@ -208,7 +220,7 @@ class MenuUtilisateurVue(VueAbstraite):
                     try:
                         id_qr = int(selection.split()[0].lstrip("#"))
                     except Exception:
-                        return MenuUtilisateuVue("Sélection invalide.")
+                        return MenuUtilisateurVue("Sélection invalide.") # Corrigé (manquait Vue)
 
                     # 3) Récupérer les stats pour CET id (via API)
                     stats_endpoint = f"{API_BASE_URL.rstrip('/')}/qrcode/{id_qr}/stats"
@@ -232,13 +244,26 @@ class MenuUtilisateurVue(VueAbstraite):
                     
                     par_jour = stats_data.get("par_jour", [])
                     if par_jour:
-                        lignes.append("Détail par jour:")
+                        lignes.append("Détail par jour (agrégé):")
                         for r in par_jour: # r est un dict {"date": "...", "vues": ...}
                             d = self._format_date(r.get("date"))
                             v = r.get("vues", 0)
                             lignes.append(f"- {d}: {v}")
                     else:
-                        lignes.append("Détail par jour: Aucune vue enregistrée.")
+                        lignes.append("Détail par jour (agrégé): Aucune vue enregistrée.")
+
+                    # --- NOUVEAU BLOC : Afficher les scans récents avec l'heure ---
+                    scans_recents = stats_data.get("scans_recents", [])
+                    if scans_recents:
+                        lignes.append("\nScans récents (avec heure):")
+                        for log in scans_recents:
+                            # Utilise le nouveau helper _format_datetime
+                            timestamp_str = self._format_datetime(log.get("timestamp"))
+                            client = log.get("client", "IP inconnue")
+                            lignes.append(f"- {timestamp_str} (Client: {client})")
+                    else:
+                        lignes.append("\nScans récents (avec heure): Aucun scan individuel trouvé.")
+                    # --- FIN DU NOUVEAU BLOC ---
 
                     return MenuUtilisateurVue("\n".join(lignes))
                 
