@@ -186,5 +186,30 @@ class TokenDao(metaclass=Singleton):
         return None
 
     @log
-    def existe_token():
-        pass
+    def existe_token(jeton):
+         """Vérifie si un token existe dans la base de données
+
+        Attributs 
+        ----------
+        jeton : str
+            Le jeton à vérifier
+
+        Returns
+        -------
+        bool
+            True si le token existe
+            False sinon
+        """
+        try :
+            with DBConnection().connection as connection:
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT 1 FROM token WHERE jeton = %(jeton)s LIMIT 1;",
+                        {"jeton": jeton},
+                    )
+                    res = cursor.fetchone()
+        except Exception as e:
+            logging.info(f"Erreur lors de la vérification de l'existence du token : {e}")
+            return False
+
+        return res is not None
