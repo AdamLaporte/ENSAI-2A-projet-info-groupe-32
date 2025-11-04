@@ -24,7 +24,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # --- Initialisation de l'application ---
-root_path = os.getenv("ROOT_PATH", "/proxy/8000")
+root_path = os.getenv("ROOT_PATH", "/8000")
 app = FastAPI(root_path=root_path)
 
 # --- Initialisation du service ---
@@ -261,6 +261,6 @@ async def index():
 # -------------------------------------------------------------
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.getenv("PORT", 8000))
+    port = int(os.getenv("PORT", 5000))
     logger.info(f"✅ Serveur lancé sur 0.0.0.0:{port} avec ROOT_PATH={root_path}")
     uvicorn.run(app, host="0.0.0.0", port=port)
