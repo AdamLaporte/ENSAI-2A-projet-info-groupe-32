@@ -117,6 +117,18 @@ class TokenService:
             return False
 
     @log
-    def existe_token():
-        pass
+    def existe_token(jeton):
+        """Vérifie si un token existe dans la base de données
+        
+        Attributs
+        ---------
+        jeton : str
+            Le jeton à vérifier
+        
+        Returns
+        -------
+        bool
+            True si le token existe, False sinon
+        """
+        return TokenDao().existe_token(jeton)
 
