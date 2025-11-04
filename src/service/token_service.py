@@ -35,10 +35,14 @@ class TokenService:
     @log
     def creer_token(self, id_user) -> Token:
         """Création d'un nouveau token pour un utilisateur
+        
         Attributs
         ---------
         id_user : int
             identifiant de l'utilisateur  
+        
+        Return
+        ------
 
         """
         nouveau_token = Token(
@@ -52,18 +56,36 @@ class TokenService:
     def existe_token(self, id_user):
         pass
     @log
-    def trouver_token_par_id(self, jeton) -> Token:
-        """Trouver un token à partir de l'identifiant de l'utilisateur"""
-        return TokenDao().trouver_token_par_id(jeton)
+    def trouver_token_par_id(self, id_user) -> Token:
+        """Trouver un token à partir de l'identifiant de l'utilisateur
+        
+        Attributs
+        ---------
+        id_user : int
+            identifiant de l'utilisateur  
 
-    @log
-    def modifier_token(self, token) -> Token:
-        """Modification d'un token """
-        return token if TokenDao().modifier_token(token) else None
+        Return
+        ------
+        token : Token
+            Renvoie le token correspondant à l'id_user None s'il n'existe pas
+        """
+        return TokenDao().trouver_token_par_id(id_user)
+
 
     @log
     def supprimer_token(self, token) -> bool:
-        """Supprimer un token"""
+        """Supprimer un token
+        
+         Attributs
+        ----------
+        token : Token
+            Le token à supprimer
+
+        Returns
+        -------
+        deleted : bool
+            True si la suppression a réussi
+            False sinon"""
         return TokenDao().supprimer_token(token)
 
 
@@ -93,3 +115,8 @@ class TokenService:
         except Exception as e:
             logging.info(f"Erreur lors de la vérification du token : {e}")
             return False
+
+    @log
+    def existe_token():
+        pass
+
