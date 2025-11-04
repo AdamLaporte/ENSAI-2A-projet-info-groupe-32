@@ -14,15 +14,17 @@ class TokenService:
     """Classe contenant les méthodes de service pour la gestion des tokens"""
     
     def generer_jeton(longueur=32):
-    """ Génère un jeton d'authentification sécurisé.
+         """ Génère un jeton d'authentification sécurisé.
     
     Attributs:
     ----------
-        longueur (int): Longueur du jeton (par défaut 32 caractères)
+        longueur :int
+            Longueur du jeton (par défaut 32 caractères)
     
     Returns:
     --------
-        str: Jeton d'authentification aléatoire
+        str
+            Jeton d'authentification aléatoire
     """
     # Utilise secrets pour une génération cryptographiquement sécurisée
     caracteres = string.ascii_letters + string.digits
@@ -32,7 +34,13 @@ class TokenService:
 
     @log
     def creer_token(self, id_user) -> Token:
-        """Création d'un nouveau token pour un utilisateur"""
+        """Création d'un nouveau token pour un utilisateur
+        Attributs
+        ---------
+        id_user : int
+            identifiant de l'utilisateur  
+
+        """
         nouveau_token = Token(
             id_user=id_user,
             jeton=generer_jeton(),
@@ -65,7 +73,7 @@ class TokenService:
         """
         Vérifie si un token est encore valide en termes de date d'expiration.
 
-        Parameters
+        Attributs
         ----------
         token : Token
             Le token à vérifier
