@@ -1,0 +1,3 @@
+psql -h postgresql-495411.user-id2774 -p 5432 -U user-id2774 -d defaultdb -A -t -F $'\t' -c "SET search_path TO projet; SELECT u.id_user, u.nom_user FROM utilisateur u ORDER BY u.id_user;"
+
+psql -h postgresql-495411.user-id2774 -p 5432 -U user-id2774 -d defaultdb -f data/test_db.sql
