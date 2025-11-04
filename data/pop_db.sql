@@ -33,8 +33,8 @@ INSERT INTO qrcode (url, id_proprietaire, type_qrcode, couleur, logo)
 SELECT q.url, u.id_user, q.type_qrcode, q.couleur, NULL::text
 FROM (VALUES
   -- raphael (3)
-  ('https://ensai.fr',                     'raphael', TRUE,  'black'),
-  ('https://www.youtube.com/',             'raphael', TRUE,  'black'),
+  ('https://ensai.fr',                   'raphael', TRUE,  'black'),
+  ('https://www.youtube.com/',           'raphael', TRUE,  'black'),
   ('https://fr.wikipedia.org/wiki/ENSAI',  'raphael', TRUE,  'black'),
 
   -- adam (2)
@@ -52,13 +52,13 @@ INSERT INTO statistique (id_qrcode, nombre_vue, date_des_vues)
 SELECT u.id_qrcode, s.nombre_vue, s.date_des_vues
 FROM (VALUES
   -- raphael: ENSAI, YouTube, Wikipedia
-  ('https://ensai.fr',                     DATE '2025-10-01', 14),
-  ('https://ensai.fr',                     DATE '2025-10-02', 19),
-  ('https://ensai.fr',                     DATE '2025-10-05',  6),
+  ('https://ensai.fr',                   DATE '2025-10-01', 14),
+  ('https://ensai.fr',                   DATE '2025-10-02', 19),
+  ('https://ensai.fr',                   DATE '2025-10-05',  6),
 
-  ('https://www.youtube.com/',             DATE '2025-10-01', 28),
-  ('https://www.youtube.com/',             DATE '2025-10-03', 37),
-  ('https://www.youtube.com/',             DATE '2025-10-05', 31),
+  ('https://www.youtube.com/',           DATE '2025-10-01', 28),
+  ('https://www.youtube.com/',           DATE '2025-10-03', 37),
+  ('https://www.youtube.com/',           DATE '2025-10-05', 31),
 
   ('https://fr.wikipedia.org/wiki/ENSAI',  DATE '2025-10-02',  8),
   ('https://fr.wikipedia.org/wiki/ENSAI',  DATE '2025-10-04', 15),

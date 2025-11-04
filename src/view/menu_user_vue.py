@@ -1,6 +1,7 @@
-# src/view/menu_user_vue.py
 from InquirerPy import inquirer
 import os
+import requests  # Ajout pour les requêtes HTTP
+import json      # Ajout pour formater le payload
 
 from view.vue_abstraite import VueAbstraite
 from view.session import Session
@@ -9,20 +10,22 @@ from dao.qrcode_dao import QRCodeDao
 from service.qrcode_service import QRCodeService
 from dao.db_connection import DBConnection
 
+# URL de base de l'API. S'attend à ce que l'API FastAPI tourne localement sur le port 5000
+# Surchargez-la dans votre .env si l'API est ailleurs
+# MODIFIÉ : Utilise BASE_API_URL pour correspondre à votre .env
+API_BASE_URL = os.getenv("BASE_API_URL", "http://127.0.0.1:5000")
+
 
 class MenuUtilisateurVue(VueAbstraite):
     """Menu utilisateur: session, mes QR codes, stats de mes QR, création, déconnexion"""
 
     def _get_current_user(self):
-        # Centralise la récupération de l'utilisateur depuis la Session
+        # ... (code existant inchangé) ...
         sess = Session()
         return getattr(sess, "user", None) or getattr(sess, "joueur", None) or getattr(sess, "utilisateur", None)
 
     def _build_scan_url(self, qr_id: int) -> str:
-        """
-        Construit l'URL de scan à afficher dans le terminal.
-        Priorité à SCAN_BASE_URL (ton endpoint /scan), sinon TRACKING_BASE_URL.
-        """
+        # ... (code existant inchangé) ...
         scan_base = os.getenv("SCAN_BASE_URL")
         tracking_base = os.getenv("TRACKING_BASE_URL", "https://monapi.example.com/r")
         base = (scan_base or tracking_base).rstrip("/")
@@ -37,21 +40,24 @@ class MenuUtilisateurVue(VueAbstraite):
                 "Infos de session",
                 "Lister mes QR codes",
                 "Voir statistiques d'un de MES QR",
-                "Créer un QR code",
+                "Créer un QR code (via API)",
                 "Se déconnecter",
             ],
         ).execute()
 
         match choix:
             case "Se déconnecter":
+                # ... (code existant inchangé) ...
                 Session().deconnexion()
                 from view.accueil.accueil_vue import AccueilVue
                 return AccueilVue()
 
             case "Infos de session":
+                # ... (code existant inchangé) ...
                 return MenuUtilisateurVue(Session().afficher())
 
             case "Lister mes QR codes":
+                # ... (code existant inchangé - lit toujours directement en BDD) ...
                 try:
                     user = self._get_current_user()
                     if user is None:
@@ -75,6 +81,7 @@ class MenuUtilisateurVue(VueAbstraite):
                     return MenuUtilisateurVue(f"Erreur lors du listing de vos QR: {e}")
 
             case "Voir statistiques d'un de MES QR":
+                # ... (code existant inchangé - lit toujours directement en BDD) ...
                 try:
                     # 1) Utilisateur connecté
                     user = self._get_current_user()
@@ -151,8 +158,9 @@ class MenuUtilisateurVue(VueAbstraite):
                 except Exception as e:
                     return MenuUtilisateurVue(f"Erreur lors de la récupération des statistiques: {e}")
 
-            case "Créer un QR code":
+            case "Créer un QR code (via API)":
                 try:
+                    # 1. Récupérer l'utilisateur
                     user = self._get_current_user()
                     if user is None:
                         return MenuUtilisateurVue("Non connecté.")
@@ -160,6 +168,7 @@ class MenuUtilisateurVue(VueAbstraite):
                     if not id_user:
                         return MenuUtilisateurVue("Impossible de déterminer l'id utilisateur.")
 
+                    # 2. Demander les infos
                     url = inquirer.text(message="URL cible du QR : ").execute().strip()
                     if not url:
                         return MenuUtilisateurVue("URL vide, opération annulée.")
@@ -174,29 +183,49 @@ class MenuUtilisateurVue(VueAbstraite):
                     logo = inquirer.text(message="Chemin du logo (optionnel, Enter pour passer) : ").execute().strip()
                     logo = logo if logo else None
 
-                    qsvc = QRCodeService(QRCodeDao())
-                    created = qsvc.creer_qrc(
-                        url=url,
-                        id_proprietaire=str(id_user),
-                        couleur=couleur,
-                        logo=logo,
-                    )
+                    # 3. Préparer l'appel API
+                    api_endpoint = f"{API_BASE_URL.rstrip('/')}/qrcode/"
+                    payload = {
+                        "url": url,
+                        "id_proprietaire": str(id_user), # L'API attend l'ID en string
+                        "couleur": couleur,
+                        "logo": logo
+                    }
 
-                    # Le service a déjà généré et sauvegardé l'image encodant l'URL de scan
-                    scan_url = created._scan_url if hasattr(created, "_scan_url") else self._build_scan_url(created.id_qrcode)
+                    print(f"Appel de l'API POST {api_endpoint}...")
+
+                    # 4. Appeler l'API
+                    response = requests.post(api_endpoint, json=payload, timeout=10)
+
+                    # 5. Gérer la réponse de l'API
+                    response.raise_for_status()  # Lève une erreur si statut 4xx ou 5xx
+                    
+                    response_data = response.json()
+                    
                     lignes = [
-                        "QR code créé avec succès:",
-                        f"- id: {created.id_qrcode}",
-                        f"- url finale (redirection): {created.url}",
-                        f"- url encodée (scan API): {scan_url}",
-                        f"- couleur: {created.couleur}",
-                        f"- logo: {created.logo or 'aucun'}",
-                        f"- image: {getattr(created, '_image_path', 'N/A')}",
-                        f"- image publique: {getattr(created, '_image_url', 'N/A')}",
+                        "QR code créé avec succès via l'API:",
+                        f"- id: {response_data.get('id_qrcode')}",
+                        f"- url finale (redirection): {response_data.get('url')}",
+                        f"- url encodée (scan API): {response_data.get('scan_url')}",
+                        f"- couleur: {response_data.get('couleur')}",
+                        f"- logo: {response_data.get('logo') or 'aucun'}",
+                        f"- image publique: {response_data.get('image_url')}",
+                        f"\nL'image a été sauvegardée sur le serveur (dans {os.getenv('QRCODE_OUTPUT_DIR', 'static/qrcodes')})"
                     ]
                     return MenuUtilisateurVue("\n".join(lignes))
+                
+                except requests.exceptions.HTTPError as http_err:
+                    # Essayer de lire le message d'erreur de l'API
+                    try:
+                        detail = http_err.response.json().get('detail', http_err)
+                    except json.JSONDecodeError:
+                        detail = http_err.response.text
+                    return MenuUtilisateurVue(f"Erreur API: {http_err.response.status_code} - {detail}")
+                except requests.exceptions.RequestException as req_err:
+                    return MenuUtilisateurVue(f"Erreur de connexion à l'API: {req_err}")
                 except Exception as e:
-                    return MenuUtilisateurVue(f"Erreur lors de la création du QR: {e}")
+                    return MenuUtilisateurVue(f"Erreur inattendue : {e}")
 
         # Par défaut on reste sur le menu
         return self
+
