@@ -14,8 +14,9 @@ def setup_test_env():
 
 def test_creer_token_ok():
     """Création de token réussie avec id auto-généré"""
+    u= Utilisateur(id_user=1)
     token = Token(
-        id_user=1,
+        id_user=u.id_user,
         jeton="xyz123",
         date_expiration=datetime.now() + timedelta(days=1),
     )
@@ -29,7 +30,8 @@ def test_creer_token_ok():
 
 def test_creer_token_ko():
     """Création échouée si données invalides"""
-    token = Token(id_user=None, jeton=None, date_expiration=None)
+    u= Utilisateur(id_user=1)
+    token = Token(id_user=u.id_user, jeton=None, date_expiration=None)
     with patch("dao.db_connection.DBConnection.connection") as mock_conn:
         mock_cursor = MagicMock()
         mock_conn.__enter__.return_value.cursor.return_value = mock_cursor

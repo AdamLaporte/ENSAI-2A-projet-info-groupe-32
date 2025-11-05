@@ -16,10 +16,10 @@ class Token:
         date d'expiration du jeton (privé)
     """
 
-    def __init__(self, jeton: str, u, date_expiration : datetime ): #comment j'importe u 
+    def __init__(self, id_user: int, jeton: str, u, date_expiration : datetime ): #comment j'importe u 
         """Constructeur"""
+        self._id_user = id_user
         self._jeton = jeton
-        self._id_user = u.id_user
         self._date_expiration = date_expiration
 
     @property
