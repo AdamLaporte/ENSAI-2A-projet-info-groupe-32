@@ -4,7 +4,7 @@ SET search_path TO projet;
 BEGIN;
 
 -- Nettoyage optionnel (si tu veux repartir propre)
-TRUNCATE TABLE logs_scan RESTART IDENTITY CASCADE; -- AJOUTÉ
+TRUNCATE TABLE logs_scan RESTART IDENTITY CASCADE;
 TRUNCATE TABLE statistique RESTART IDENTITY CASCADE;
 TRUNCATE TABLE qrcode RESTART IDENTITY CASCADE;
 TRUNCATE TABLE token RESTART IDENTITY CASCADE;
@@ -67,19 +67,17 @@ FROM (VALUES
 ) AS s(url, date_des_vues, nombre_vue)
 JOIN urls u ON u.url = s.url;
 
--- AJOUTÉ : Exemples de logs de scans (avec heure ET NOUVELLES COLONNES)
+-- AJOUTÉ : Exemples de logs de scans (avec heure ET NOUVELLES COLONNES GÉO)
 WITH urls AS (SELECT id_qrcode, url FROM qrcode)
-INSERT INTO logs_scan (id_qrcode, client_host, user_agent, date_scan, referer, accept_language)
-SELECT u.id_qrcode, l.client_host, l.user_agent, l.date_scan, l.referer, l.lang
+INSERT INTO logs_scan (id_qrcode, client_host, user_agent, date_scan, referer, accept_language, geo_country, geo_region, geo_city)
+SELECT u.id_qrcode, l.client_host, l.user_agent, l.date_scan, l.referer, l.lang, l.geo_country, l.geo_region, l.geo_city
 FROM (VALUES
   -- Scans pour 'https://github.com/' (adam)
-  ('https://github.com/', '192.168.1.10', 'Mozilla/5.0 (iPhone...)', TIMESTAMPTZ '2025-10-04 08:15:30Z', NULL, 'fr-FR,fr;q=0.9'),
-  ('https://github.com/', '192.168.1.10', 'Mozilla/5.0 (iPhone...)', TIMESTAMPTZ '2025-10-04 09:20:11Z', NULL, 'fr-FR,fr;q=0.9'),
-  ('https://github.com/', '10.0.0.5',     'Mozilla/5.0 (Android...)', TIMESTAMPTZ '2025-10-04 14:45:01Z', 'https://www.google.com/', 'en-US,en;q=0.8'),
+  ('https://github.com/', '192.168.1.10', 'Mozilla/5.0 (iPhone...)', TIMESTAMPTZ '2025-10-04 08:15:30Z', NULL, 'fr-FR,fr;q=0.9', 'France', 'Bretagne', 'Rennes'),
+  ('https://github.com/', '10.0.0.5',     'Mozilla/5.0 (Android...)', TIMESTAMPTZ '2025-10-04 14:45:01Z', 'https://www.google.com/', 'en-US,en;q=0.8', 'United States', 'California', 'Mountain View'),
   -- Scans pour 'https://ensai.fr' (raphael)
-  ('https://ensai.fr',    '193.51.184.1', 'Mozilla/5.0 (Windows...)', TIMESTAMPTZ '2025-10-05 11:10:05Z', NULL, 'fr-FR,fr;q=0.9'),
-  ('https://ensai.fr',    '193.51.184.1', 'Mozilla/5.0 (Windows...)', TIMESTAMPTZ '2025-10-05 11:10:45Z', NULL, 'fr-FR,fr;q=0.9')
-) AS l(url, client_host, user_agent, date_scan, referer, lang)
+  ('https://ensai.fr',    '193.51.184.1', 'Mozilla/5.0 (Windows...)', TIMESTAMPTZ '2025-10-05 11:10:05Z', NULL, 'fr-FR,fr;q=0.9', 'France', 'Ile-de-France', 'Paris')
+) AS l(url, client_host, user_agent, date_scan, referer, lang, geo_country, geo_region, geo_city)
 JOIN urls u ON u.url = l.url;
 
 

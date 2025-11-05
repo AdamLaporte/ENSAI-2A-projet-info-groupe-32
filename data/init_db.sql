@@ -59,7 +59,11 @@ CREATE TABLE IF NOT EXISTS logs_scan (
   client_host TEXT,
   user_agent TEXT,
   date_scan TIMESTAMPTZ DEFAULT NOW(),
-  referer TEXT,         -- AJOUTÉ
-  accept_language TEXT  -- AJOUTÉ
+  referer TEXT,
+  accept_language TEXT,
+  -- AJOUTS POUR LA GÉOLOCALISATION
+  geo_country TEXT,
+  geo_region TEXT,
+  geo_city TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_logs_scan_id_qrcode ON logs_scan(id_qrcode);

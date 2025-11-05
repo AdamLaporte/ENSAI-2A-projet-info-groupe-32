@@ -7,11 +7,6 @@ from datetime import datetime # Ajout pour parser les timestamps
 from view.vue_abstraite import VueAbstraite
 from view.session import Session
 
-# Ces imports ne sont plus nécessaires car la vue est entièrement pilotée par l'API
-# from dao.qrcode_dao import QRCodeDao
-# from service.qrcode_service import QRCodeService
-# from dao.db_connection import DBConnection
-
 # URL de base de l'API. Doit correspondre à votre .env
 API_BASE_URL = os.getenv("BASE_API_URL", "http://127.0.0.1:5000")
 
@@ -42,16 +37,59 @@ class MenuUtilisateurVue(VueAbstraite):
         try: return iso_string.split('T')[0]
         except Exception: return iso_string
 
-    # --- NOUVEL HELPER POUR FORMATER DATE ET HEURE ---
+    # --- HELPER POUR FORMATER DATE ET HEURE ---
     def _format_datetime(self, iso_string):
         if not iso_string: return 'N/A'
         try:
-            # Parse la date ISO complète
+            # Gère le 'Z' (UTC) si présent
+            if iso_string.endswith('Z'):
+                iso_string = iso_string[:-1] + '+00:00'
             dt = datetime.fromisoformat(iso_string)
-            # Formate en "Le 04/11/2025 à 15:50:30"
             return dt.strftime("Le %d/%m/%Y à %H:%M:%S")
         except Exception:
             return iso_string
+
+    # --- HELPER POUR TRONQUER LE TEXTE ---
+    def _truncate(self, text, max_len=40):
+        if not text: return "N/A"
+        text = str(text)
+        return (text[:max_len] + '...') if len(text) > max_len else text
+
+    # --- HELPERS DE PARSING ---
+    def _parse_language(self, lang_string):
+        """Extrait la langue principale (ex: FR) de 'fr-FR,fr;q=0.9'."""
+        if not lang_string: return "N/A"
+        try:
+            first_lang = lang_string.split(',')[0]
+            main_lang = first_lang.split('-')[0]
+            return main_lang.upper()
+        except Exception:
+            return self._truncate(lang_string, 5) 
+
+    def _parse_device(self, agent_string):
+        """Tente de deviner l'appareil depuis le User-Agent."""
+        if not agent_string: return "Inconnu"
+        agent_lower = agent_string.lower()
+        if "android" in agent_lower: return "Android"
+        if "iphone" in agent_lower: return "iPhone"
+        if "ipad" in agent_lower: return "iPad"
+        if "windows" in agent_lower: return "Windows"
+        if "macintosh" in agent_lower or "mac os x" in agent_lower: return "Mac"
+        if "linux" in agent_lower: return "Linux"
+        return "Autre"
+        
+    # --- NOUVEL HELPER GÉO ---
+    def _format_geo(self, city, country, client_ip):
+        """Formate la sortie Géo."""
+        if city and country:
+            return f"📍 {city}, {country}"
+        if country:
+            return f"📍 {country}"
+        if client_ip:
+            # Fallback to IP if no geo data (ex: IP locale)
+            return f"🌍 {client_ip}"
+        return "Localisation inconnue"
+    # --- FIN DE L'AJOUT ---
 
 
     def choisir_menu(self):
@@ -79,29 +117,26 @@ class MenuUtilisateurVue(VueAbstraite):
 
             case "Lister mes QR codes (via API)":
                 try:
-                    # 1. Récupérer l'utilisateur
                     user = self._get_current_user()
                     if user is None:
                         return MenuUtilisateurVue("Non connecté.")
                     
                     id_user = getattr(user, "id_user", None)
-                    nom_user = getattr(user, 'nom_user', id_user) # Pour l'en-tête
+                    nom_user = getattr(user, 'nom_user', id_user)
                     
                     if not id_user:
                         return MenuUtilisateurVue("Impossible de déterminer l'id utilisateur.")
 
-                    # 2. Construire l'URL de l'API et appeler
                     api_endpoint = f"{API_BASE_URL.rstrip('/')}/qrcode/utilisateur/{str(id_user)}"
                     print(f"Appel de l'API GET {api_endpoint}...")
 
                     response = requests.get(api_endpoint, timeout=10)
-                    response.raise_for_status()  # Lève une erreur si statut 4xx ou 5xx
+                    response.raise_for_status() 
 
                     qrs_data = response.json()
                     if not qrs_data:
                         return MenuUtilisateurVue(f"Aucun QR code trouvé pour {nom_user} via l'API.")
 
-                    # --- NOUVELLE LOGIQUE DE FILTRAGE ---
                     print("\nFiltrer la liste de vos QR codes :")
                     filter_choice = inquirer.select(
                         message="Afficher :",
@@ -113,20 +148,16 @@ class MenuUtilisateurVue(VueAbstraite):
                     if filter_choice == "Tous":
                         filtered_list = qrs_data
                     elif filter_choice == "Uniquement les QR suivis":
-                        # --- MODIFIÉ ---
                         filtered_list = [q for q in qrs_data if q.get("type") is True]
-                    else: # "Uniquement les QR non-suivis"
-                        # --- MODIFIÉ ---
+                    else: 
                         filtered_list = [q for q in qrs_data if q.get("type") is False]
 
                     if not filtered_list:
                         return MenuUtilisateurVue("Aucun QR code ne correspond à ce filtre.")
 
-                    # --- NOUVELLE LOGIQUE DE SÉLECTION ---
                     print("\nSélectionnez un QR code pour voir les détails :")
                     options = []
                     for q in filtered_list:
-                        # --- MODIFIÉ ---
                         suivi_str = "(Suivi)" if q.get("type") is True else "(Non-suivi)"
                         options.append(f"#{q.get('id_qrcode', '?')} {suivi_str} → {q.get('url', 'N/A')}")
                     
@@ -136,25 +167,21 @@ class MenuUtilisateurVue(VueAbstraite):
                     ).execute()
                     
                     try:
-                        # Extraire l'ID de la sélection (ex: "#123 ...")
                         id_qr_str = selection.split(' ')[0].lstrip("#")
                         id_qr = int(id_qr_str)
                     except Exception:
                         return MenuUtilisateurVue("Sélection invalide.")
 
-                    # Retrouver l'objet complet du QR code sélectionné
                     selected_qr = next((q for q in filtered_list if q.get("id_qrcode") == id_qr), None)
                     
                     if not selected_qr:
                          return MenuUtilisateurVue(f"Erreur: impossible de retrouver les détails du QR #{id_qr}.")
 
-                    # --- NOUVEL AFFICHAGE DES DÉTAILS ---
                     titre = f"Détails du QR code #{id_qr}"
                     lignes = ["\n" + titre, "-" * len(titre)]
                     lignes.append(f"URL de destination: {selected_qr.get('url', 'N/A')}")
                     lignes.append(f"Date de création:   {self._format_date(selected_qr.get('date_creation'))}")
                     
-                    # --- MODIFIÉ ---
                     if selected_qr.get("type") is True:
                         lignes.append(f"Type:               Suivi (Dynamique)")
                         lignes.append(f"URL de scan (encodée): {selected_qr.get('scan_url', 'N/A')}")
@@ -172,14 +199,12 @@ class MenuUtilisateurVue(VueAbstraite):
                     return MenuUtilisateurVue("\n".join(lignes))
 
                 except requests.exceptions.HTTPError as http_err:
-                    # Gérer les erreurs de l'API (ex: 404, 500)
                     try:
                         detail = http_err.response.json().get('detail', http_err)
                     except json.JSONDecodeError:
                         detail = http_err.response.text
                     return MenuUtilisateurVue(f"Erreur API: {http_err.response.status_code} - {detail}")
                 except requests.exceptions.RequestException as req_err:
-                    # Gérer les erreurs de connexion
                     return MenuUtilisateurVue(f"Erreur de connexion à l'API: {req_err}")
                 except Exception as e:
                     return MenuUtilisateurVue(f"Erreur inattendue : {e}")
@@ -187,7 +212,6 @@ class MenuUtilisateurVue(VueAbstraite):
 
             case "Voir statistiques d'un de MES QR (via API)":
                 try:
-                    # 1) Utilisateur connecté
                     user = self._get_current_user()
                     if user is None:
                         return MenuUtilisateurVue("Non connecté.")
@@ -195,22 +219,17 @@ class MenuUtilisateurVue(VueAbstraite):
                     if not id_user:
                         return MenuUtilisateurVue("Impossible de déterminer l'id utilisateur.")
 
-                    # 2) Lister uniquement MES QR (via API) et proposer un choix
                     list_endpoint = f"{API_BASE_URL.rstrip('/')}/qrcode/utilisateur/{str(id_user)}"
                     print(f"Appel de l'API GET {list_endpoint} pour lister vos QRs...")
                     list_response = requests.get(list_endpoint, timeout=10)
                     list_response.raise_for_status()
                     
                     mes_qr_data = list_response.json()
-                    
-                    # --- MODIFIÉ : Filtrer pour ne montrer que les QR suivis ---
-                    # --- MODIFIÉ ---
                     qr_suivis = [q for q in mes_qr_data if q.get("type") is True]
                     
                     if not qr_suivis:
                         return MenuUtilisateurVue("Vous n'avez aucun QR code 'suivi' pour lequel voir des stats.")
 
-                    # Construit les options pour InquirerPy
                     options = [f"#{q.get('id_qrcode', '?')} {q.get('url', '')}" for q in qr_suivis]
                     selection = inquirer.select(
                         message="Choisissez un QR code 'suivi' :",
@@ -220,20 +239,17 @@ class MenuUtilisateurVue(VueAbstraite):
                     try:
                         id_qr = int(selection.split()[0].lstrip("#"))
                     except Exception:
-                        return MenuUtilisateurVue("Sélection invalide.") # Corrigé (manquait Vue)
+                        return MenuUtilisateurVue("Sélection invalide.")
 
-                    # 3) Récupérer les stats pour CET id (via API)
                     stats_endpoint = f"{API_BASE_URL.rstrip('/')}/qrcode/{id_qr}/stats"
                     print(f"Appel de l'API GET {stats_endpoint}...")
                     stats_response = requests.get(stats_endpoint, timeout=10)
                     stats_response.raise_for_status()
                     
-                    stats_data = stats_response.json() # Le dict de l'API
+                    stats_data = stats_response.json() 
 
-                    # 4) Construire l'URL de scan (helper)
                     scan_url = self._build_scan_url(id_qr)
 
-                    # 5) Formater la sortie exactement comme demandé
                     titre = f"Statistiques de votre QR #{id_qr}"
                     lignes = [titre, "-" * len(titre)]
                     lignes.append(f"URL de scan API: {scan_url}")
@@ -245,25 +261,35 @@ class MenuUtilisateurVue(VueAbstraite):
                     par_jour = stats_data.get("par_jour", [])
                     if par_jour:
                         lignes.append("Détail par jour (agrégé):")
-                        for r in par_jour: # r est un dict {"date": "...", "vues": ...}
+                        for r in par_jour: 
                             d = self._format_date(r.get("date"))
                             v = r.get("vues", 0)
                             lignes.append(f"- {d}: {v}")
                     else:
                         lignes.append("Détail par jour (agrégé): Aucune vue enregistrée.")
 
-                    # --- NOUVEAU BLOC : Afficher les scans récents avec l'heure ---
+                    # --- BLOC MODIFIÉ : Affichage graphique avec GÉO ---
                     scans_recents = stats_data.get("scans_recents", [])
                     if scans_recents:
-                        lignes.append("\nScans récents (avec heure):")
+                        lignes.append("\nScans récents (détaillés):")
                         for log in scans_recents:
-                            # Utilise le nouveau helper _format_datetime
                             timestamp_str = self._format_datetime(log.get("timestamp"))
-                            client = log.get("client", "IP inconnue")
-                            lignes.append(f"- {timestamp_str} (Client: {client})")
+                            client_ip = log.get("client", "IP inconnue")
+                            lang = self._parse_language(log.get("language"))
+                            device = self._parse_device(log.get("user_agent"))
+                            
+                            # --- AJOUT GÉO ---
+                            city = log.get("geo_city")
+                            country = log.get("geo_country")
+                            geo_str = self._format_geo(city, country, client_ip)
+                            # --- FIN AJOUT GÉO ---
+                            
+                            # Formatage aligné
+                            # ex: • Le 05/11/2025 à 11:17:38 | 📱 Windows   | 🌐 FR  | 📍 Rennes, France
+                            lignes.append(f"  • {timestamp_str} | 📱 {device:<8} | 🌐 {lang:<3} | {geo_str}")
                     else:
-                        lignes.append("\nScans récents (avec heure): Aucun scan individuel trouvé.")
-                    # --- FIN DU NOUVEAU BLOC ---
+                        lignes.append("\nScans récents (détaillés): Aucun scan individuel trouvé.")
+                    # --- FIN DU BLOC MODIFIÉ ---
 
                     return MenuUtilisateurVue("\n".join(lignes))
                 
@@ -272,7 +298,6 @@ class MenuUtilisateurVue(VueAbstraite):
                         detail = http_err.response.json().get('detail', http_err)
                     except json.JSONDecodeError:
                         detail = http_err.response.text
-                    # Gestion spéciale pour l'erreur 404 des stats
                     if http_err.response.status_code == 404:
                          return MenuUtilisateurVue(f"Info: {detail}")
                     return MenuUtilisateurVue(f"Erreur API: {http_err.response.status_code} - {detail}")
@@ -284,7 +309,6 @@ class MenuUtilisateurVue(VueAbstraite):
 
             case "Créer un QR code (via API)":
                 try:
-                    # 1. Récupérer l'utilisateur
                     user = self._get_current_user()
                     if user is None:
                         return MenuUtilisateurVue("Non connecté.")
@@ -292,17 +316,14 @@ class MenuUtilisateurVue(VueAbstraite):
                     if not id_user:
                         return MenuUtilisateurVue("Impossible de déterminer l'id utilisateur.")
 
-                    # 2. Demander les infos
                     url = inquirer.text(message="URL cible du QR : ").execute().strip()
                     if not url:
                         return MenuUtilisateurVue("URL vide, opération annulée.")
 
-                    # --- AJOUTÉ : Demander si le suivi est activé ---
                     is_tracked = inquirer.confirm(
                         message="Activer le suivi (statistiques) pour ce QR code ?",
                         default=True,
                     ).execute()
-                    # --- FIN DE L'AJOUT ---
 
                     couleurs = ["black", "blue", "red", "green", "purple", "teal", "orange", "gray"]
                     couleur = inquirer.select(
@@ -314,23 +335,19 @@ class MenuUtilisateurVue(VueAbstraite):
                     logo = inquirer.text(message="Chemin du logo (optionnel, Enter pour passer) : ").execute().strip()
                     logo = logo if logo else None
 
-                    # 3. Préparer l'appel API
                     api_endpoint = f"{API_BASE_URL.rstrip('/')}/qrcode/"
                     payload = {
                         "url": url,
-                        "id_proprietaire": str(id_user), # L'API attend l'ID en string
-                        "type_qrcode": is_tracked, # --- AJOUTÉ : Envoyer le choix
+                        "id_proprietaire": str(id_user), 
+                        "type_qrcode": is_tracked,
                         "couleur": couleur,
                         "logo": logo
                     }
 
                     print(f"Appel de l'API POST {api_endpoint}...")
 
-                    # 4. Appeler l'API
                     response = requests.post(api_endpoint, json=payload, timeout=10)
-
-                    # 5. Gérer la réponse de l'API
-                    response.raise_for_status()  # Lève une erreur si statut 4xx ou 5xx
+                    response.raise_for_status() 
                     
                     response_data = response.json()
                     
@@ -338,7 +355,7 @@ class MenuUtilisateurVue(VueAbstraite):
                         "QR code créé avec succès via l'API:",
                         f"- id: {response_data.get('id_qrcode')}",
                         f"- url finale (redirection): {response_data.get('url')}",
-                        f"- url encodée (scan API): {response_data.get('scan_url', 'N/A (suivi désactivé)')}", # --- Modifié
+                        f"- url encodée (scan API): {response_data.get('scan_url', 'N/A (suivi désactivé)')}",
                         f"- couleur: {response_data.get('couleur')}",
                         f"- logo: {response_data.get('logo') or 'aucun'}",
                         f"- image publique: {response_data.get('image_url')}",
@@ -347,7 +364,6 @@ class MenuUtilisateurVue(VueAbstraite):
                     return MenuUtilisateurVue("\n".join(lignes))
                 
                 except requests.exceptions.HTTPError as http_err:
-                    # Essayer de lire le message d'erreur de l'API
                     try:
                         detail = http_err.response.json().get('detail', http_err)
                     except json.JSONDecodeError:
@@ -360,4 +376,3 @@ class MenuUtilisateurVue(VueAbstraite):
 
         # Par défaut on reste sur le menu
         return self
-

@@ -61,16 +61,21 @@ WHERE q.type_qrcode = TRUE -- N'agréger que les QR suivis
 GROUP BY s.id_qrcode, q.url
 ORDER BY s.id_qrcode;
 
--- 6) AJOUTÉ: Journal détaillé des scans (avec heure)
+-- 6) AJOUTÉ: Journal détaillé des scans (avec heure et GÉO)
 SELECT
   l.id_scan,
   l.id_qrcode,
   q.url,
   l.date_scan,
   l.client_host,
+  -- AJOUT GÉO
+  l.geo_city,
+  l.geo_region,
+  l.geo_country,
+  -- Fin Ajout Géo
   l.user_agent,
-  l.referer,          -- AJOUTÉ
-  l.accept_language   -- AJOUTÉ
+  l.referer,
+  l.accept_language
 FROM logs_scan l
 JOIN qrcode q ON q.id_qrcode = l.id_qrcode
 ORDER BY l.date_scan DESC;
