@@ -68,7 +68,9 @@ SELECT
   q.url,
   l.date_scan,
   l.client_host,
-  l.user_agent
+  l.user_agent,
+  l.referer,          -- AJOUTÉ
+  l.accept_language   -- AJOUTÉ
 FROM logs_scan l
 JOIN qrcode q ON q.id_qrcode = l.id_qrcode
 ORDER BY l.date_scan DESC;
