@@ -13,13 +13,27 @@ Cette approche permet de responsabiliser chaque membre, tout en gardant une coh�
 
 ## Tableau de répartition
 
-| Membre   | Responsabilités | Relecture |
-|----------|-----------------|-----------|
-| Adam | `Utilisateur`, `UtilisateurDAO`, `UtilisateurService`, tests associés | Mayténa |
-| Lesline | `QRCode`, `QRCodeDAO`, `QRCodeService`, tests associés | Louis |
-| Louis | `Statistique`, `StatistiqueDAO`, `StatistiqueService`, tests associés | Ahmed |
-| Mayténa | `Token`, `TokenDAO`, `TokenService`, tests associés | Lesline |
-| Ahmed | Mise en place de la **base de données**, définition des contraintes d’intégrité et relations, cohérence des schémas, et coordination pour assurer la concordance entre les différentes implémentations | Adam |
+| Membre   | Responsabilités                                                        | Relecture |
+|----------|------------------------------------------------------------------------|-----------|
+| Adam     | `Utilisateur`, `UtilisateurDAO`, `UtilisateurService`, tests associés  | Mayténa   |
+| Lesline  | `QRCode`, `QRCodeDAO`, `QRCodeService`, tests associés                 | Louis     |
+| Louis    | `Statistique`, `StatistiqueDAO`, `StatistiqueService`, tests associés  | Ahmed     |
+| Mayténa  | `Token`, `TokenDAO`, `TokenService`, tests associés                    | Lesline   |
+| Ahmed    | Mise en place de la **base de données**, définition des contraintes    | Adam      |
+           | d’intégrité et relations, cohérence des schémas, et coordination pour  |           |
+           | assurer la concordance entre les différentes implémentations           |           |
 
 ---
  
+
+faire un bouton retour pour le terminal 
+mettre en variable les ports 
+renvoyer une image par l'api 
+
+a faire : 
+relecture syntaxe, doc code propre 
+adapter les tests 
+token 
+qrcode non suivi 
+rajoute adresse ip toutes donnees possible via les requetes http
+rapport

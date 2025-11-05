@@ -46,10 +46,9 @@ def test_creer_statistique_ok():
 def test_creer_statistique_ko():
     """Création échouée si incohérence entre nombre_vue et date_des_vues"""
     dates = [date(2025, 10, 25)]
-    s = Statistique(id_qrcode=11, nombre_vue=5, date_des_vues=dates)  # incohérent
+    s = Statistique(id_qrcode=11, nombre_vue=5, date_des_vues=dates) 
 
     ok = StatistiqueDao().creer_statistique(s)
-    # selon ton implémentation, ça doit renvoyer False
     assert ok is False
 
 
@@ -78,7 +77,6 @@ def test_modifier_statistique_ok():
     s = Statistique(id_qrcode=13, nombre_vue=len(dates_init), date_des_vues=dates_init)
     StatistiqueDao().creer_statistique(s)
 
-    # On ajoute une vue
     s.date_des_vues.append(date(2025, 10, 22))
     s.nombre_vue = len(s.date_des_vues)
 
