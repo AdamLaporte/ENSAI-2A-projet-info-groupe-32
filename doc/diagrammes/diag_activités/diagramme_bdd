@@ -3,10 +3,13 @@ classDiagram
     Utilisateur "1" -- "1" Token
     QR Code "1" -- "1" Statistique
 
+
     class Utilisateur {
-        + id_user : int 
+        + id_user : int
+        + pseudo : str
         + mdp : str
     }
+
 
     class QR Code {
         +id_qrcode: int
@@ -18,12 +21,13 @@ classDiagram
         +logo: str
     }
 
+
     class Statistique {
-        +id_stat : int
         +id_qrcode: int
         +nombre_vue: str
         +date_des_vues: list[date]
     }
+
 
     class Token {
         +id_user: int
