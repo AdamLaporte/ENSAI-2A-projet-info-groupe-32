@@ -37,3 +37,9 @@ token
 qrcode non suivi 
 rajoute adresse ip toutes donnees possible via les requetes http
 rapport
+
+
+questions profs :
+
+- token :
+est ce que je dois remettre des setters et getter de id_user est ce que je dois les importer ?
