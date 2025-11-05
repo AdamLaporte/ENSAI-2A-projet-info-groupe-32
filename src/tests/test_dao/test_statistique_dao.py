@@ -11,8 +11,15 @@ from business_object.statistique import Statistique
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_environment():
     """Initialisation du schéma de tests pour StatistiqueDao"""
-    with patch.dict(os.environ, {"POSTGRES_SCHEMA": "projet_test_dao"}):
+    with patch.dict(os.environ, {"POSTGRES_HOST": "localhost",
+                                 "POSTGRES_PORT": "5432",
+                                 "POSTGRES_DATABASE": "postgres",
+                                 "POSTGRES_USER": "postgres",
+                                 "POSTGRES_PASSWORD": "postgres",
+                                 "POSTGRES_SCHEMA": "projet_test_dao"
+    }):
         ResetDatabase().lancer(test_dao=True)
+
     yield
 
 
