@@ -155,7 +155,15 @@ async def scan_qrcode(id_qrcode: int, request: Request, qrcode_service: QRCodeSe
 
         # --- Données de la requête ---
         user_agent = request.headers.get("user-agent", "inconnu")
-        client_host = request.client.host if request.client else "inconnu"
+        # --- MODIFIÉ : Essayer de trouver la VRAIE IP du client derrière le proxy ---
+        client_host = request.headers.get("x-forwarded-for")
+        if client_host:
+            # S'il y a plusieurs IPs (proxy1, proxy2, client), prendre la première
+            client_host = client_host.split(',')[0].strip()
+        else:
+            # Plan B: l'IP du proxy lui-même (ce que vous avez actuellement)
+            client_host = request.client.host if request.client else "inconnu"
+        # --- FIN DE LA MODIFICATION ---        
         date_vue = datetime.utcnow()
         referer = request.headers.get("referer") 
         language = request.headers.get("accept-language")

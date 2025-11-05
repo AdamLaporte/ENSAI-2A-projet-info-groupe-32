@@ -286,7 +286,7 @@ class MenuUtilisateurVue(VueAbstraite):
                             
                             # Formatage aligné
                             # ex: • Le 05/11/2025 à 11:17:38 | 📱 Windows   | 🌐 FR  | 📍 Rennes, France
-                            lignes.append(f"  • {timestamp_str} | 📱 {device:<8} | 🌐 {lang:<3} | {geo_str}")
+                            lignes.append(f"  • {timestamp_str} | 📱 {device:<8} | 🌐 {lang:<3} | {geo_str} ({client_ip})")
                     else:
                         lignes.append("\nScans récents (détaillés): Aucun scan individuel trouvé.")
                     # --- FIN DU BLOC MODIFIÉ ---
