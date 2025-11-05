@@ -1,5 +1,4 @@
 from datetime import datetime
-from business_object.utilisateur import Utilisateur as u
 
 
 class Token:
@@ -8,19 +7,36 @@ class Token:
 
     Attributs
     ----------
+     _id_user : int
+        identifiant du joueur lié à ce jeton (privé).
     _jeton : str
         jeton d'authentification (privé)
-    _id_user : int
-        identifiant du joueur lié à ce jeton (privé).
     _date_expiration :
         date d'expiration du jeton (privé)
     """
 
-    def __init__(self, id_user: int, jeton: str, u, date_expiration : datetime ): #comment j'importe u 
+    def __init__(self, id_user: int, jeton: str, date_expiration : datetime ):
         """Constructeur"""
+        if not isinstance(id_user,int) :
+            raise ValueError("L'identifiant de l'utilisateur 'id_user' doit être un entier.")
+        if not isinstance(jeton, str) :
+            raise ValueError("Le jeton d'authentification 'jeton' doit être une chaine de caractères.")
+        if not isinstance(date_expiration, datetime):
+             raise ValueError("La date d'expiration du jeton 'date_expiration' doit être une date au format datetime.")
+
         self._id_user = id_user
         self._jeton = jeton
-        self._date_expiration = date_expiration
+        self._date_expiration = date_expiration  
+
+    @property
+    def id_user(self):
+        return self._id_user
+
+    @id_user.setter
+    def id_user(self, value):
+        if value is not None and not isinstance(value, int):
+            raise ValueError("L'identifiant 'id_user' doit être un entier.")
+        self._id_user = value
 
     @property
     def jeton(self):
@@ -29,7 +45,7 @@ class Token:
     @jeton.setter
     def jeton(self, value):
         if value is not None and not isinstance(value, str):
-            raise ValueError("Le jeton d'authentification doit être une chaîne de caractères")
+            raise ValueError("Le jeton d'authentification doit être une chaîne de caractères.")
         self._jeton = value
 
     @property
@@ -39,7 +55,7 @@ class Token:
     @date_expiration.setter
     def date_expiration(self, value):
         if value is not None and not isinstance(value, datetime):
-            raise ValueError("La date d'expiration doit être une date")
+            raise ValueError("La date d'expiration doit être une date.")
         self._date_expiration = value
 
     def __eq__(self, other):
