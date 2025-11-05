@@ -122,7 +122,6 @@ def test_supprimer_ko():
 
 
 def test_sauvegarde_et_relecture_dates():
-    """Vérifie la persistance fidèle de la liste de dates"""
     dates = [date(2025, 10, 21), date(2025, 10, 22), date(2025, 10, 23)]
     s = Statistique(id_qrcode=15, nombre_vue=len(dates), date_des_vues=dates)
 
