@@ -17,11 +17,11 @@ class Token:
 
     def __init__(self, id_user: int, jeton: str, date_expiration : datetime ):
         """Constructeur"""
-        if not isinstance(id_user,int) :
+        if not isinstance(id_user,int) and id_user is not None  :
             raise ValueError("L'identifiant de l'utilisateur 'id_user' doit être un entier.")
-        if not isinstance(jeton, str) :
+        if not isinstance(jeton, str) and jeton is not None  :
             raise ValueError("Le jeton d'authentification 'jeton' doit être une chaine de caractères.")
-        if not isinstance(date_expiration, datetime):
+        if not isinstance(date_expiration, datetime) and date_expiration is not None :
              raise ValueError("La date d'expiration du jeton 'date_expiration' doit être une date au format datetime.")
 
         self._id_user = id_user

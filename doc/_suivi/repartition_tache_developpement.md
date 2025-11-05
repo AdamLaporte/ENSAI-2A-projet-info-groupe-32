@@ -41,5 +41,8 @@ rapport
 
 questions profs :
 
+difference entre attributs et parameters ?
+est ce que les tests sont bon ?
+
 - token :
 est ce que je dois remettre des setters et getter de id_user est ce que je dois les importer ?
