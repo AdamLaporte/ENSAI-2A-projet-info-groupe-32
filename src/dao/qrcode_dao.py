@@ -113,7 +113,7 @@ class QRCodeDao:
             logger.exception(f"Erreur lors de la suppression du QR code {id_qrcode} : {e}")
             return False
 
-    def trouver_par_id(self, id_qrcode: int) -> Optional[Qrcode]:
+    def trouver_qrc_par_id_qrc(self, id_qrcode: int) -> Optional[Qrcode]:
         """
         Retourne un Qrcode par id, ou None si introuvable.
         """
@@ -196,7 +196,7 @@ class QRCodeDao:
             logger.exception(f"Erreur lors du listing des QR codes pour user {id_user} : {e}")
             return []
 
-    def mettre_a_jour(
+    def modifier_qrc(
         self,
         id_qrcode: int,
         id_user: int,

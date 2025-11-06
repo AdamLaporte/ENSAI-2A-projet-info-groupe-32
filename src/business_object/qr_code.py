@@ -1,11 +1,14 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 
 class Qrcode:
     """
     Classe métier représentant un QR code suivi.
-    Utilise 'type_qrcode' partout.
+
+    Utilisation des @property pour exposer un accès contrôlé aux attributs.
+    - id_qrcode et date_creation sont en lecture seule (générés côté service/BDD).
+    - url, type_qrcode, couleur et logo sont modifiables via les setters avec validation.
     """
 
     def __init__(
@@ -14,7 +17,7 @@ class Qrcode:
         url: str,
         id_proprietaire: str,
         date_creation: Optional[datetime] = None,
-        type_qrcode: bool = True,  # MODIFIÉ
+        type_qrcode: bool = True,
         couleur: Optional[str] = None,
         logo: Optional[str] = None,
     ):
@@ -24,7 +27,9 @@ class Qrcode:
             url: URL liée au QR code.
             id_proprietaire: identifiant du propriétaire (string).
             date_creation: datetime de création (None pour laisser la DB/Service la définir).
-            type_qrcode: True si QR suivi, False si QR simple. # MODIFIÉ
+            type_qrcode: True si QR suivi, False si QR simple.
+            couleur: couleur optionnelle.
+            logo: chemin/nom du logo optionnel.
         """
         self._id_qrcode = id_qrcode
         self._url = None
@@ -36,7 +41,7 @@ class Qrcode:
 
         # Utiliser les setters pour valider les valeurs initiales
         self.url = url
-        self.type_qrcode = type_qrcode  # MODIFIÉ
+        self.type_qrcode = type_qrcode
         if couleur is not None:
             self.couleur = couleur
         if logo is not None:
@@ -73,13 +78,13 @@ class Qrcode:
     @property
     def type_qrcode(self) -> bool:  # MODIFIÉ
         """Type du QR code (True = suivi, False = simple)."""
-        return self._type_qrcode  # MODIFIÉ
+        return self._type_qrcode
 
     @type_qrcode.setter
     def type_qrcode(self, t: bool) -> None:  # MODIFIÉ
         if not isinstance(t, bool):
             raise TypeError("Le champ 'type_qrcode' doit être un booléen.")
-        self._type_qrcode = t  # MODIFIÉ
+        self._type_qrcode = t
 
     @property
     def couleur(self) -> Optional[str]:
@@ -107,7 +112,7 @@ class Qrcode:
         "url": self.url,
         "id_proprietaire": self.id_proprietaire,
         "date_creation": self.date_creation.isoformat() if self.date_creation else None,
-        "type_qrcode": self.type_qrcode,  # MODIFIÉ
+        "type_qrcode": self.type_qrcode,
         "couleur": self.couleur,
         "logo": self.logo,
         }

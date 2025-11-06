@@ -2,8 +2,8 @@ from utils.log_decorator import log
 from dao.token_dao import TokenDao
 from business_object.token import Token
 
-
-import datetime
+import logging 
+from datetime import datetime, timedelta
 
 import secrets
 import string
@@ -46,14 +46,27 @@ class TokenService:
         """
         nouveau_token = Token(
             id_user=id_user,
-            jeton=generer_jeton(),
-            date_expiration = datetime.now() + timedelta(hours=1) #le jeton est valide une heure 
+            jeton=TokenService.generer_jeton(),
+            date_expiration = datetime.now() + timedelta(hours=5) #le jeton est valide une heure 
         )
         return nouveau_token if TokenDao().creer_token(nouveau_token) else None
 
-    @log
-    def existe_token(self, id_user):
-        pass
+        """
+        Vérifie si un token existe dans la base de données via le DAO.
+        
+        Attributs
+        ---------
+        jeton : str
+            Le jeton à vérifier
+        
+        Returns
+        -------
+        bool
+            True si le token existe, False sinon
+        """
+        return TokenDao().existe_token(jeton)
+
+
     @log
     def trouver_token_par_id(self, id_user) -> Token:
         """Trouver un token à partir de l'identifiant de l'utilisateur
@@ -108,15 +121,17 @@ class TokenService:
         try:
             if token.date_expiration is None:
                 return False
-            # Comparer la date d'expiration avec la date et heure actuelle
-            now = datetime.now().date()  # uniquement la date
+            
+            now = datetime.now() 
+        
             return token.date_expiration >= now
         except Exception as e:
             logging.info(f"Erreur lors de la vérification du token : {e}")
             return False
 
+
     @log
-    def existe_token(jeton):
+    def existe_token(self, jeton):
         """Vérifie si un token existe dans la base de données
         
         Attributs
