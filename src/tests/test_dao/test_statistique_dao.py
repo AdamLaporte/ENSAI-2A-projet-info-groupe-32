@@ -37,3 +37,56 @@ def test_creer_stat_ok():
     s_db = StatistiqueDao().trouver_par_id_qrcode(s.id_qrcode)
     assert s_db is not None
     assert s_db.id_qrcode == id_qr
+
+def test_creer_stat_ko():
+    """Création échouée si données invalides"""
+    # données manquantes
+    s = Statistique(id_qrcode=None, nombre_vue=None, date_des_vues=None)
+    ok = StatistiqueDao().creer_statistique(s)
+    assert ok is False
+
+def test_trouver_par_id_stat_existant():
+    """Recherche par id_stat d'une statistique existant"""
+    # On crée une stat pour être sûr de l’existence
+    id_qrcode = randint(1,9999)
+    nombre_vue = 2
+    date_des_vues = [date(2025,10,21), date(2025,11,3)]
+    s = Statistique(id_qrcode=id_qrcode, nombre_vue= nombre_vue, date_des_vues=date_des_vues)
+    StatistiqueDao().creer_statistique(s)
+
+    statistique = StatistiqueDao().trouver_par_id_stat(s.id_stat)
+    assert statistique is not None
+    assert isinstance(statistique, Statistique)
+    assert statistique.id_qrcode == s.id_qrcode
+    assert statistique.id_stat == s.id_stat
+
+
+def test_trouver_par_id_stat_non_existant():
+    """Recherche par id_user inexistant"""
+    statistique = StatistiqueDao().trouver_par_id_stat(999999)
+    assert statistique is None
+
+def test_modifier_stat_ok():
+    """Modification"""
+    # Crée une statistique
+    id_qrcode = randint(1,9999)
+    nbr_vue = 2
+    date_des_vues = [date(2025,10,21), date(2025,11,2)]
+    s = Statistique(iq_qrcode=id_qrcode, nombre_vue=nbr_vue, date_des_vues=date_des_vues)
+    StatistiqueDao().creer_statistique(s)
+
+    # Modifie son nbr_vue et date_des_vues
+    s._nombre_vue += 1
+    date_des_vues = date_des_vues.append(date(2025,11,5))
+    assert StatistiqueDao().modifier_statistique(s) is not None
+
+    # Vérifier en base
+    s_db = StatistiqueDao().trouver_par_id_qrcode(s.id_qrcode) #id_qrcode p-ê à changer
+    assert s_db is not None
+    assert s_db.nombre_vue != "new_pwd"  # bien hashé
+
+def test_modifier_user_ko():
+    """Modification échouée (id_user inexistant)"""
+    u = Utilisateur(id_user=999999, nom_user="no_user", mdp=hash_password("pwd", "no_user"))
+    ok = UtilisateurDao().modifier_user(u)
+    assert ok is False
