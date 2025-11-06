@@ -31,17 +31,22 @@ mettre en variable les ports
 renvoyer une image par l'api 
 
 a faire : 
-relecture syntaxe, doc code propre 
-adapter les tests 
-token 
-rapport
-chnager pour pouvoir mettre n'importe quoi pas que des http dans les url des qrcodes 
-verifier que il y a du sql que dans les dao 
+ 
+chnager pour pouvoir mettre n'importe quoi pas que des http dans les url des qrcodes  : adam
+relire tout les tests : adam et maytena 
+rapport : louis maytena ahmed 
+mettre en place token adam et maytena 
+relire code et documenter relecture syntaxe, doc code propre ahmed lesline 
+mettre les attributs privé : tout le monde 
+
+si jamais bcp de temps : 
+mot de passe oublié 
+
 
 questions profs :
 
 difference entre attributs et parameters ?
-est ce que les tests sont bon ?
+
 
 - token :
 est ce que je dois remettre des setters et getter de id_user est ce que je dois les importer ?
