@@ -2,7 +2,7 @@ import logging
 
 from utils.singleton import Singleton
 from utils.log_decorator import log
-
+from datetime import date, datetime
 from dao.db_connection import DBConnection
 
 from business_object.statistique import Statistique
@@ -55,13 +55,13 @@ class StatistiqueDao(metaclass=Singleton):
         return created
 
     @log
-    def trouver_par_id_qrcode(self, id_qrcode) -> Statistique:
-        """Trouver une statistique grâce à l'id du QR code
+    def trouver_par_id_stat(self, id_stat) -> Statistique:
+        """Trouver une statistique grâce à l'id de la stat
 
         Parameters
         ----------
-        id_qrcode : int
-            identifiant du QR code
+        id_stat : int
+            identifiant de la statistique
 
         Returns
         -------
@@ -76,9 +76,9 @@ class StatistiqueDao(metaclass=Singleton):
                         """
                         SELECT *
                           FROM statistique
-                         WHERE id_qrcode = %(id_qrcode)s;
+                         WHERE id_stat = %(id_stat)s;
                         """,
-                        {"id_qrcode": id_qrcode},
+                        {"id_stat": id_stat},
                     )
                     res = cursor.fetchone()
         except Exception as e:
@@ -98,13 +98,7 @@ class StatistiqueDao(metaclass=Singleton):
 
     @log
     def lister_toutes(self) -> list[Statistique]:
-        """Lister toutes les statistiques présentes dans la base de données
-
-        Returns
-        -------
-        liste_statistiques : list[Statistique]
-            renvoie la liste de toutes les statistiques enregistrées
-        """
+        """Lister toutes les statistiques présentes dans la base de données"""
 
         try:
             with DBConnection().connection as connection:
@@ -112,7 +106,7 @@ class StatistiqueDao(metaclass=Singleton):
                     cursor.execute(
                         """
                         SELECT *
-                          FROM statistique;
+                        FROM statistique;
                         """
                     )
                     res = cursor.fetchall()
@@ -120,19 +114,40 @@ class StatistiqueDao(metaclass=Singleton):
             logging.info(e)
             raise
 
-        liste_statistiques = []
+        stats_dict = {}
 
-        if res:
-            for row in res:
-                statistique = Statistique(
-                    id_qrcode=row["id_qrcode"],
-                    id_stat=row["id_stat"],
-                    nombre_vue=row["nombre_vue"],
-                    date_des_vues=row["date_des_vues"],
-                )
-                liste_statistiques.append(statistique)
+        for row in res:
+            key = (row["id_qrcode"], row["id_stat"])
+
+            # Conversion de la date SQL → objet datetime.date
+            if isinstance(row["date_des_vues"], str):
+                vue_date = datetime.strptime(row["date_des_vues"], "%Y-%m-%d").date()
+            else:
+                vue_date = row["date_des_vues"]
+
+            if key not in stats_dict:
+                stats_dict[key] = {
+                    "id_qrcode": row["id_qrcode"],
+                    "id_stat": row["id_stat"],
+                    "nombre_vue": row["nombre_vue"],
+                    "date_des_vues": [vue_date],
+                }
+            else:
+                stats_dict[key]["date_des_vues"].append(vue_date)
+                stats_dict[key]["nombre_vue"] += row["nombre_vue"]
+
+        liste_statistiques = []
+        for data in stats_dict.values():
+            statistique = Statistique(
+                id_qrcode=data["id_qrcode"],
+                id_stat=data["id_stat"],
+                nombre_vue=data["nombre_vue"],
+                date_des_vues=data["date_des_vues"],
+            )
+            liste_statistiques.append(statistique)
 
         return liste_statistiques
+
 
     @log
     def modifier_statistique(self, statistique) -> bool:
