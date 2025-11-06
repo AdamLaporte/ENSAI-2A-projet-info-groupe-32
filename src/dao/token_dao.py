@@ -212,11 +212,13 @@ class TokenDao(metaclass=Singleton):
         return None
 
     @log
-    def existe_token(jeton):
+    def existe_token(self, jeton: str) -> bool:
         """ Vérifie si un token existe dans la base de données
 
         Attributs 
         ----------
+        self : TokenDao
+            L'instance de la classe.
         jeton : str
             Le jeton à vérifier
 

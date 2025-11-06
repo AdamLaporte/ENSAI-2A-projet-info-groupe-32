@@ -276,7 +276,7 @@ def test_trouver_id_user_par_token_erreur_bdd(MockDBConnection):
 # ====================================================================
 
 @patch('dao.token_dao.DBConnection')
-def test_existe_token_oui(MockDBConnection):
+def test_existe_token_ok(MockDBConnection):
     """Teste l'existence d'un jeton (trouvé)."""
     
     # 1. Préparation du mock
@@ -290,14 +290,14 @@ def test_existe_token_oui(MockDBConnection):
     mock_cursor.fetchone.return_value = {"token": jeton_existant} 
     
     # 2. Exécution (Appel sur la CLASSE car la méthode n'a pas 'self' dans le DAO)
-    resultat = TokenDao.existe_token(jeton_existant)
+    resultat = TokenDao().existe_token(jeton_existant)
     
     # 3. Assertions
     assert resultat is True
 
 
 @patch('dao.token_dao.DBConnection')
-def test_existe_token_non(MockDBConnection):
+def test_existe_token_ko(MockDBConnection):
     """Teste l'existence d'un jeton (non trouvé)."""
     
     # 1. Préparation du mock
@@ -310,7 +310,7 @@ def test_existe_token_non(MockDBConnection):
     mock_cursor.fetchone.return_value = None 
     
     # 2. Exécution
-    resultat = TokenDao.existe_token(jeton_inexistant)
+    resultat = TokenDao().existe_token(jeton_inexistant)
     
     # 3. Assertions
     assert resultat is False
@@ -327,7 +327,7 @@ def test_existe_token_erreur_bdd(MockDBConnection):
     mock_cursor.execute.side_effect = Exception("Erreur de BDD")
     
     # 2. Exécution
-    resultat = TokenDao.existe_token("jeton_cause_erreur")
+    resultat = TokenDao().existe_token("jeton_cause_erreur")
     
     # 3. Assertions
     assert resultat is False # Le DAO gère l'exception et retourne False
