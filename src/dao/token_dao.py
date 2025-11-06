@@ -1,5 +1,5 @@
 import logging
-
+from datetime import datetime
 from utils.singleton import Singleton
 from utils.log_decorator import log
 
@@ -108,8 +108,8 @@ class TokenDao(metaclass=Singleton):
         token = None
         if res:
             token = Token(
+                id_user=res["id_user"],
                 jeton=res["jeton"],
-                Utilisateur=Utilisateur(id_user=res["id_user"]),
                 date_expiration=res["date_expiration"],
             )
 
@@ -136,17 +136,17 @@ class TokenDao(metaclass=Singleton):
                 with conn.cursor() as cursor:
                     cursor.execute(
                         "DELETE FROM Token WHERE jeton = %(jeton)s;",
-                        {"jeton": Token.jeton}
+                        {"jeton": token.jeton}
                     )
                     res = cursor.rowcount  # nombre de lignes affectées
         except Exception as e:
-            logging.info(f"Erreur lors de la suppression du token {Token.jeton}: {e}")
+            logging.info(f"Erreur lors de la suppression du token {token.jeton}: {e}")
             return False
 
         if res == 1:
-            logging.info(f"Token {Token.jeton} supprimé avec succès.")
+            logging.info(f"Token {token.jeton} supprimé avec succès.")
         else:
-            logging.info(f"Aucun token supprimé pour {Token.jeton}.")
+            logging.info(f"Aucun token supprimé pour {token.jeton}.")
         return res == 1
 
     @log
@@ -172,8 +172,8 @@ class TokenDao(metaclass=Singleton):
 
             now = datetime.now()
             if token.date_expiration < now:
-                self.token_dao.supprimer_token(token)
-                logging.info(f"Token {Token.jeton} expiré et supprimé de la base")
+                self.supprimer_token(token)
+                logging.info(f"Token {token.jeton} expiré et supprimé de la base")
                 return False
 
             return True
