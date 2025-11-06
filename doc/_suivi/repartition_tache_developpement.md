@@ -34,8 +34,6 @@ a faire :
 relecture syntaxe, doc code propre 
 adapter les tests 
 token 
-qrcode non suivi 
-rajoute adresse ip toutes donnees possible via les requetes http
 rapport
 
 
