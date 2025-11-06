@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 
@@ -34,10 +34,11 @@ class Qrcode:
         self._id_qrcode = id_qrcode
         self._url = None
         self._id_proprietaire = id_proprietaire
-        self._date_creation = date_creation or datetime.utcnow()
+        self._date_creation = date_creation or datetime.now(timezone.utc)
         self._type_qrcode = None
         self._couleur = None
         self._logo = None
+
 
         # Utiliser les setters pour valider les valeurs initiales
         self.url = url

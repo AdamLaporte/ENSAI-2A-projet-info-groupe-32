@@ -7,7 +7,7 @@ import os
 
 # assume env/config
 QR_OUTPUT_DIR = os.getenv("QRCODE_OUTPUT_DIR", "static/qrcodes")
-# Lit l'URL de scan depuis l'env (utilisée si type_ is True)
+# Lit l'URL de scan depuis l'env (utilisée si type_qrcode is True)
 SCAN_BASE = os.getenv("SCAN_BASE_URL")
 
 
@@ -31,7 +31,7 @@ class QRCodeService:
         self,
         url: str,
         id_proprietaire: str,
-        type_: bool = True,
+       type_qrcode: bool = True,
         couleur: Optional[str] = None,
         logo: Optional[str] = None,
     ) -> Optional[Qrcode]:
@@ -42,7 +42,7 @@ class QRCodeService:
             url=url, # URL de destination finale
             id_proprietaire=id_proprietaire,
             date_creation=None,
-            type=type_, # bool : True = suivi, False = classique
+           type_qrcode =type_qrcode, # bool : True = suivi, False = classique
             couleur=couleur,
             logo=logo,
         )
@@ -54,7 +54,7 @@ class QRCodeService:
         
         scan_url = None # Sera défini uniquement si le suivi est actif
         
-        if type_ is True:
+        if type_qrcode is True:
             # --- CAS 1: QR Code avec Suivi (Dynamique) ---
             # L'URL à encoder dans l'image est notre URL de scan
             if not SCAN_BASE:
@@ -140,20 +140,20 @@ class QRCodeService:
             raise UnauthorizedError("Modification non autorisée.")
 
         # 2. Déterminer si une re-génération est nécessaire
-        # (on ne re-génère que si c'est un QR statique (type==False)
+        # (on ne re-génère que si c'est un QR statique (type_qrcode==False)
         # OU si on le transforme en QR statique)
         
         payload_url_a_encoder = None
         regenerate_image = False
 
         nouvelle_url = url if url is not None else qr.url
-        nouveau_type = type_qrcode if type_qrcode is not None else qr.type
+        nouveau_type_qrcode = type_qrcode if type_qrcode is not None else qr.type_qrcode
 
-        if nouveau_type is False:
+        if nouveau_type_qrcode is False:
             # Cas 1: C'est (ou ça devient) un QR Statique.
             # L'image DOIT contenir l'URL de destination.
             
-            if (qr.type is True): # Il passe de Dynamique -> Statique
+            if (qr.type_qrcode is True): # Il passe de Dynamique -> Statique
                 regenerate_image = True
                 payload_url_a_encoder = nouvelle_url
             
@@ -174,7 +174,7 @@ class QRCodeService:
              # L'image DOIT contenir l'URL de scan.
              scan_url = f"{SCAN_BASE.rstrip('/')}/{qr.id_qrcode}"
 
-             if (qr.type is False): # Il passe de Statique -> Dynamique
+             if (qr.type_qrcode is False): # Il passe de Statique -> Dynamique
                 regenerate_image = True
                 payload_url_a_encoder = scan_url
              
@@ -203,11 +203,10 @@ class QRCodeService:
                 logo_path=nouveau_logo,
             )
 
-        # 4. Mettre à jour la base de données (Correction du nom de la méthode)
-        # On utilise 'mettre_a_jour' (du DAO) au lieu de 'modifier_qrc'
-        return self.dao.mettre_a_jour(
+        
+        return self.dao.modifier_qrc(
             id_qrcode=id_qrcode,
-            id_user=int(id_user), # Le DAO attend un int
+            id_user=id_user, # Le DAO attend un int
             url=url,
             type_qrcode=type_qrcode,
             couleur=couleur,
