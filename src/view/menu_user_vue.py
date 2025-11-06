@@ -102,6 +102,8 @@ class MenuUtilisateurVue(VueAbstraite):
                 "Lister mes QR codes (via API)",
                 "Voir statistiques d'un de MES QR (via API)", 
                 "Créer un QR code (via API)",
+                "Modifier un QR code (via API)",
+                "Supprimer un QR code (via API)", 
                 "Se déconnecter",
             ],
         ).execute()
@@ -111,6 +113,166 @@ class MenuUtilisateurVue(VueAbstraite):
                 Session().deconnexion()
                 from view.accueil.accueil_vue import AccueilVue
                 return AccueilVue()
+
+            case "Modifier un QR code (via API)":
+                try:
+                    user = self._get_current_user()
+                    if user is None:
+                        return MenuUtilisateurVue("Non connecté.")
+                    id_user = getattr(user, "id_user", None)
+                    if not id_user:
+                        return MenuUtilisateurVue("Impossible de déterminer l'id utilisateur.")
+
+                    # --- 1. Récupérer la liste des QR codes
+                    list_endpoint = f"{API_BASE_URL.rstrip('/')}/qrcode/utilisateur/{str(id_user)}"
+                    print(f"Appel de l'API GET {list_endpoint} pour lister vos QRs...")
+                    list_response = requests.get(list_endpoint, timeout=10)
+                    list_response.raise_for_status()
+                    mes_qr_data = list_response.json()
+                    
+                    if not mes_qr_data:
+                        return MenuUtilisateurVue("Vous n'avez aucun QR code à modifier.")
+
+                    # --- 2. Choisir le QR à modifier ---
+                    options = [f"#{q.get('id_qrcode', '?')} → {self._truncate(q.get('url', 'N/A'), 50)}" for q in mes_qr_data]
+                    options.append("--- ANNULER ---")
+
+                    selection = inquirer.select(
+                        message="Choisissez un QR code à MODIFIER :",
+                        choices=options,
+                    ).execute()
+
+                    if selection == "--- ANNULER ---":
+                        return MenuUtilisateurVue("Modification annulée.")
+
+                    id_qr = int(selection.split()[0].lstrip("#"))
+                    
+                    # Trouver le QR sélectionné pour pré-remplir les champs
+                    selected_qr = next((q for q in mes_qr_data if q.get("id_qrcode") == id_qr), {})
+
+                    # --- 3. Demander la nouvelle URL ---
+                    print(f"\nURL actuelle : {selected_qr.get('url', 'N/A')}")
+                    nouvelle_url = inquirer.text(
+                        message="Entrez la nouvelle URL de destination (ou laissez vide pour ne pas changer) :",
+                        default=""
+                    ).execute().strip()
+
+                    # (On pourrait aussi demander la couleur, le type, etc. ici)
+                    
+                    if not nouvelle_url:
+                        return MenuUtilisateurVue("Aucune modification fournie. Opération annulée.")
+
+                    # --- 4. Appeler l'API PUT ---
+                    update_endpoint = f"{API_BASE_URL.rstrip('/')}/qrcode/{id_qr}"
+                    payload = {
+                        "url": nouvelle_url
+                        # "couleur": "...", (si vous l'avez demandé)
+                    }
+
+                    print(f"Appel de l'API PUT {update_endpoint}...")
+                    
+                    response = requests.put(
+                        update_endpoint,
+                        json=payload,
+                        params={"id_user": str(id_user)}, # Paramètre de requête pour l'auth
+                        timeout=10
+                    )
+                    
+                    response.raise_for_status() 
+                    
+                    return MenuUtilisateurVue(f"Le QR code #{id_qr} a été mis à jour.")
+                
+                except requests.exceptions.HTTPError as http_err:
+                    # ... (copiez le bloc 'except' de la fonction de suppression) ...
+                    try:
+                        detail = http_err.response.json().get('detail', http_err)
+                    except json.JSONDecodeError:
+                        detail = http_err.response.text
+                    return MenuUtilisateurVue(f"Erreur API: {http_err.response.status_code} - {detail}")
+                except Exception as e:
+                    return MenuUtilisateurVue(f"Erreur lors de la modification: {e}")
+
+            case "Supprimer un QR code (via API)":
+                try:
+                    user = self._get_current_user()
+                    if user is None:
+                        return MenuUtilisateurVue("Non connecté.")
+                    id_user = getattr(user, "id_user", None)
+                    if not id_user:
+                        return MenuUtilisateurVue("Impossible de déterminer l'id utilisateur.")
+
+                    # --- 1. Récupérer la liste de TOUS les QR codes de l'utilisateur ---
+                    list_endpoint = f"{API_BASE_URL.rstrip('/')}/qrcode/utilisateur/{str(id_user)}"
+                    print(f"Appel de l'API GET {list_endpoint} pour lister vos QRs...")
+                    list_response = requests.get(list_endpoint, timeout=10)
+                    list_response.raise_for_status()
+                    
+                    mes_qr_data = list_response.json()
+                    
+                    if not mes_qr_data:
+                        return MenuUtilisateurVue("Vous n'avez aucun QR code à supprimer.")
+
+                    # --- 2. Préparer les options pour la sélection ---
+                    options = []
+                    for q in mes_qr_data:
+                        suivi_str = "(Suivi)" if q.get("type") is True else "(Non-suivi)"
+                        url_tronquee = self._truncate(q.get('url', 'N/A'), max_len=50)
+                        options.append(f"#{q.get('id_qrcode', '?')} {suivi_str} → {url_tronquee}")
+                    
+                    # On ajoute une option pour annuler
+                    options.append("--- ANNULER ---")
+
+                    selection = inquirer.select(
+                        message="Choisissez un QR code à SUPPRIMER :",
+                        choices=options,
+                    ).execute()
+
+                    if selection == "--- ANNULER ---":
+                        return MenuUtilisateurVue("Suppression annulée.")
+
+                    # --- 3. Extraire l'ID et confirmer ---
+                    try:
+                        id_qr = int(selection.split()[0].lstrip("#"))
+                    except Exception:
+                        return MenuUtilisateurVue("Sélection invalide.")
+
+                    confirmation = inquirer.confirm(
+                        message=f"Êtes-vous certain de vouloir supprimer le QR code #{id_qr} ?\nCette action est irréversible.",
+                        default=False
+                    ).execute()
+
+                    if not confirmation:
+                        return MenuUtilisateurVue("Suppression annulée.")
+
+                    # --- 4. Appeler l'API DELETE ---
+                    delete_endpoint = f"{API_BASE_URL.rstrip('/')}/qrcode/{id_qr}"
+                    print(f"Appel de l'API DELETE {delete_endpoint}...")
+
+                    # L'API attend 'id_user' en paramètre de requête (query param)
+                    # voir la définition de la route dans app (1).py
+                    response = requests.delete(
+                        delete_endpoint,
+                        params={"id_user": str(id_user)}, 
+                        timeout=10
+                    )
+                    
+                    response.raise_for_status() # Lève une erreur si 4xx ou 5xx
+                    
+                    return MenuUtilisateurVue(f"Le QR code #{id_qr} a été supprimé avec succès.")
+                
+                except requests.exceptions.HTTPError as http_err:
+                    try:
+                        detail = http_err.response.json().get('detail', http_err)
+                    except json.JSONDecodeError:
+                        detail = http_err.response.text
+                    if http_err.response.status_code == 404:
+                         return MenuUtilisateurVue(f"Info: {detail}")
+                    return MenuUtilisateurVue(f"Erreur API: {http_err.response.status_code} - {detail}")
+                except requests.exceptions.RequestException as req_err:
+                    return MenuUtilisateurVue(f"Erreur de connexion à l'API: {req_err}")
+                except Exception as e:
+                    return MenuUtilisateurVue(f"Erreur lors de la suppression: {e}")
+
 
             case "Infos de session":
                 return MenuUtilisateurVue(Session().afficher())

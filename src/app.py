@@ -76,6 +76,11 @@ class QRCodeCreateModel(BaseModel):
     couleur: Optional[str] = "noir"
     logo: Optional[str] = None
 
+class QRCodeUpdateModel(BaseModel):
+    url: Optional[str] = None
+    type_qrcode: Optional[bool] = None
+    couleur: Optional[str] = None
+    logo: Optional[str] = None
 # -------------------------------------------------------------
 # 🔹 ROUTES QR CODE CRUD
 # -------------------------------------------------------------
@@ -132,6 +137,35 @@ async def supprimer_qrcode(id_qrcode: int, id_user: str, qrcode_service: QRCodeS
         logger.exception("Erreur suppression QR code : %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.put("/qrcode/{id_qrcode}", tags=["QR Codes"])
+async def modifier_qrcode(
+    id_qrcode: int, 
+    data: QRCodeUpdateModel,
+    id_user: str, # Reçu en paramètre de requête
+    qrcode_service: QRCodeService = Depends(get_qrcode_service)
+):
+    """Modifier un QR code (seulement par le propriétaire)."""
+    try:
+        updated = qrcode_service.modifier_qrc(
+            id_qrcode=id_qrcode,
+            id_user=id_user,
+            url=data.url,
+            type_qrcode=data.type_qrcode,
+            couleur=data.couleur,
+            logo=data.logo
+        )
+        if not updated:
+            raise HTTPException(status_code=404, detail="Mise à jour échouée")
+            
+        return updated.to_dict()
+        
+    except QRCodeNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except UnauthorizedError as e:
+        raise HTTPException(status_code=403, detail="Non autorisé")
+    except Exception as e:
+        logger.exception("Erreur modification QR code : %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 # -------------------------------------------------------------
 # 🔹 ROUTE SCAN (tracking + redirection)

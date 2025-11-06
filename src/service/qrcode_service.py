@@ -120,16 +120,18 @@ class QRCodeService:
             # Ne pas bloquer la suppression en BDD si la suppression de fichier échoue
             print(f"Avertissement: n'a pas pu supprimer le fichier image {file_path}: {e}")
 
-        return self.dao.supprimer(id_qrcode) # Assumer que le DAO a une méthode 'supprimer(id)'
+        return self.dao.supprimer_qrc(id_qrcode) # Le DAO a une méthode 'supprimer_qrc(id)'
 
     def modifier_qrc(self, id_qrcode: int, id_user: str,
                      url: Optional[str] = None, type_qrcode: Optional[bool] = None,
                      couleur: Optional[str] = None, logo: Optional[str] = None) -> Qrcode:
         """
         Modifie un QR code existant après vérification du propriétaire.
-        NOTE: La modification du 'type' ou de 'l'url' devrait déclencher 
-        une re-génération de l'image, ce qui n'est pas fait ici.
+        Si l'URL ou le type d'un QR 'non-suivi' est modifié,
+        l'image PNG est re-générée.
         """
+        
+        # 1. Vérifier les droits
         qr = self.dao.trouver_par_id(id_qrcode)
         if not qr:
             raise QRCodeNotFoundError(f"QR code {id_qrcode} introuvable.")
@@ -137,10 +139,77 @@ class QRCodeService:
         if str(qr.id_proprietaire) != str(id_user):
             raise UnauthorizedError("Modification non autorisée.")
 
-        return self.dao.modifier_qrc(
+        # 2. Déterminer si une re-génération est nécessaire
+        # (on ne re-génère que si c'est un QR statique (type==False)
+        # OU si on le transforme en QR statique)
+        
+        payload_url_a_encoder = None
+        regenerate_image = False
+
+        nouvelle_url = url if url is not None else qr.url
+        nouveau_type = type_qrcode if type_qrcode is not None else qr.type
+
+        if nouveau_type is False:
+            # Cas 1: C'est (ou ça devient) un QR Statique.
+            # L'image DOIT contenir l'URL de destination.
+            
+            if (qr.type is True): # Il passe de Dynamique -> Statique
+                regenerate_image = True
+                payload_url_a_encoder = nouvelle_url
+            
+            elif (url is not None and url != qr.url): # Il était Statique et son URL change
+                regenerate_image = True
+                payload_url_a_encoder = nouvelle_url
+            
+            elif (couleur is not None and couleur != qr.couleur): # Statique et couleur change
+                 regenerate_image = True
+                 payload_url_a_encoder = nouvelle_url
+
+            elif (logo is not None and logo != qr.logo): # Statique et logo change
+                 regenerate_image = True
+                 payload_url_a_encoder = nouvelle_url
+
+        else:
+             # Cas 2: C'est (ou ça devient) un QR Dynamique.
+             # L'image DOIT contenir l'URL de scan.
+             scan_url = f"{SCAN_BASE.rstrip('/')}/{qr.id_qrcode}"
+
+             if (qr.type is False): # Il passe de Statique -> Dynamique
+                regenerate_image = True
+                payload_url_a_encoder = scan_url
+             
+             elif (couleur is not None and couleur != qr.couleur): # Dynamique et couleur change
+                regenerate_image = True
+                payload_url_a_encoder = scan_url
+
+             elif (logo is not None and logo != qr.logo): # Dynamique et logo change
+                regenerate_image = True
+                payload_url_a_encoder = scan_url
+
+
+        # 3. Re-générer l'image si nécessaire
+        if regenerate_image:
+            print(f"Re-génération de l'image pour QR {id_qrcode}...")
+            
+            # Utilise les nouvelles valeurs (si fournies) ou les anciennes
+            nouveau_couleur = couleur if couleur is not None else qr.couleur
+            nouveau_logo = logo if logo is not None else qr.logo
+
+            generate_and_save_qr_png(
+                payload_url_a_encoder,
+                out_dir=QR_OUTPUT_DIR,
+                filename=f"qrcode_{qr.id_qrcode}.png", # Ecrase l'ancien
+                fill_color=nouveau_couleur or "black",
+                logo_path=nouveau_logo,
+            )
+
+        # 4. Mettre à jour la base de données (Correction du nom de la méthode)
+        # On utilise 'mettre_a_jour' (du DAO) au lieu de 'modifier_qrc'
+        return self.dao.mettre_a_jour(
             id_qrcode=id_qrcode,
+            id_user=int(id_user), # Le DAO attend un int
             url=url,
-            type_=type_qrcode,
+            type_qrcode=type_qrcode,
             couleur=couleur,
             logo=logo
         )
