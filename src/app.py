@@ -300,7 +300,7 @@ async def stats_qrcode(
     - ...et plus
     """
     # 1. Vérification des droits (logique métier)
-    qr = qrcode_service.dao.trouver_par_id(id_qrcode) # (Vous accédez encore au DAO ici, c'est ok)
+    qr = qrcode_service.dao.trouver_qrc_par_id_qrc(id_qrcode) # (Vous accédez encore au DAO ici, c'est ok)
     if not qr:
         raise HTTPException(status_code=404, detail="QR code introuvable")
 

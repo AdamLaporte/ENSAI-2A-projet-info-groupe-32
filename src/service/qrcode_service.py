@@ -102,7 +102,7 @@ class QRCodeService:
         """
         Supprime un QR code après vérification du propriétaire.
         """
-        qr = self.dao.trouver_par_id(id_qrcode) # 'trouver_par_id' semble plus correct ici
+        qr = self.dao.trouver_qrc_par_id_qrc(id_qrcode) # 'trouver_par_id' semble plus correct ici
         if not qr:
             raise QRCodeNotFoundError(f"QR code {id_qrcode} introuvable.")
         
@@ -132,7 +132,7 @@ class QRCodeService:
         """
         
         # 1. Vérifier les droits
-        qr = self.dao.trouver_par_id(id_qrcode)
+        qr = self.dao.trouver_qrc_par_id_qrc(id_qrcode)
         if not qr:
             raise QRCodeNotFoundError(f"QR code {id_qrcode} introuvable.")
         
