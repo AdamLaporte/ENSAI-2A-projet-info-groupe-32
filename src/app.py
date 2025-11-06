@@ -21,7 +21,11 @@ load_dotenv()  # charge le .env dans os.environ
 from service.qrcode_service import QRCodeService
 from dao.qrcode_dao import QRCodeDao
 from dao.db_connection import DBConnection
-
+from service.statistique_service import StatistiqueService
+from service.log_scan_service import LogScanService
+from dao.statistique_dao import StatistiqueDao 
+from dao.log_scan_dao import LogScanDao   
+from service.qrcode_service import QRCodeService, QRCodeNotFoundError, UnauthorizedError
 # Logging de base
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -34,6 +38,12 @@ QR_OUTPUT_DIR = os.getenv("QRCODE_OUTPUT_DIR", "static/qrcodes")
 
 def get_qrcode_service():
     return QRCodeService(QRCodeDao())
+
+def get_statistique_service():
+    return StatistiqueService() 
+
+def get_log_scan_service():
+    return LogScanService(LogScanDao())
 
 # --- NOUVELLE FONCTION : Helper de Géolocalisation ---
 def _get_geolocation_from_ip(ip: str) -> (Optional[str], Optional[str], Optional[str]):
@@ -73,7 +83,7 @@ class QRCodeCreateModel(BaseModel):
     url: str
     id_proprietaire: str
     type_qrcode: Optional[bool] = True
-    couleur: Optional[str] = "noir"
+    couleur: Optional[str] = "black"
     logo: Optional[str] = None
 
 class QRCodeUpdateModel(BaseModel):
@@ -168,10 +178,16 @@ async def modifier_qrcode(
         raise HTTPException(status_code=500, detail=str(e))
 
 # -------------------------------------------------------------
-# 🔹 ROUTE SCAN (tracking + redirection)
+# 🔹 ROUTE SCAN (Refactorisée)
 # -------------------------------------------------------------
 @app.get("/scan/{id_qrcode}", include_in_schema=True, tags=["Scan"])
-async def scan_qrcode(id_qrcode: int, request: Request, qrcode_service: QRCodeService = Depends(get_qrcode_service)):
+async def scan_qrcode(
+    id_qrcode: int, 
+    request: Request, 
+    qrcode_service: QRCodeService = Depends(get_qrcode_service),
+    stat_service: StatistiqueService = Depends(get_statistique_service),
+    log_service: LogScanService = Depends(get_log_scan_service)
+):
     """
     Lorsqu'un utilisateur scanne le QR code :
     - [GÉO] Tente de géolocaliser l'IP
@@ -179,70 +195,62 @@ async def scan_qrcode(id_qrcode: int, request: Request, qrcode_service: QRCodeSe
     - [REDIRECTION] puis on redirige vers l'URL réelle
     """
     try:
+        # 1. Trouver le QR Code (via le service/dao)
+        # (J'ai gardé qrcode_service.dao car votre service n'a pas de .trouver_par_id)
         qr = qrcode_service.dao.trouver_par_id(id_qrcode)
         if not qr:
             raise HTTPException(status_code=404, detail="QR code introuvable")
 
-        if qr.type is False:
+        # 2. Rediriger si le QR n'est pas suivi
+        if qr.type_qrcode is False: # (Note: j'ai corrigé 'qr.type' en 'qr.type_qrcode')
             logger.info(f"Scan NON enregistré (QR non-suivi) pour QRCode {id_qrcode}")
             return RedirectResponse(url=qr.url, status_code=307)
 
-        # --- Données de la requête ---
+        # --- 3. Collecter les données de la requête ---
         user_agent = request.headers.get("user-agent", "inconnu")
-        # --- MODIFIÉ : Essayer de trouver la VRAIE IP du client derrière le proxy ---
         client_host = request.headers.get("x-forwarded-for")
         if client_host:
-            # S'il y a plusieurs IPs (proxy1, proxy2, client), prendre la première
             client_host = client_host.split(',')[0].strip()
         else:
-            # Plan B: l'IP du proxy lui-même (ce que vous avez actuellement)
             client_host = request.client.host if request.client else "inconnu"
-        # --- FIN DE LA MODIFICATION ---        
+        
         date_vue = datetime.utcnow()
         referer = request.headers.get("referer") 
         language = request.headers.get("accept-language")
 
-        # --- AJOUT : Appel de l'API de GÉOLOCALISATION ---
+        # --- 4. Obtenir la géolocalisation ---
         geo_country, geo_region, geo_city = _get_geolocation_from_ip(client_host)
-        # --- FIN DE L'AJOUT ---
-
-        # Enregistrement en BDD
-        with DBConnection().connection as conn:
-            with conn.cursor() as cur:
-                # 1. Incrémenter la table agrégée
-                cur.execute(
-                    """
-                    INSERT INTO statistique (id_qrcode, nombre_vue, date_des_vues)
-                    VALUES (%s, 1, %s)
-                    ON CONFLICT (id_qrcode, date_des_vues)
-                    DO UPDATE SET nombre_vue = statistique.nombre_vue + 1;
-                    """,
-                    (id_qrcode, date_vue.date()),
-                )
-                
-                # 2. Insérer le log détaillé (avec les données GÉO)
-                cur.execute(
-                    """
-                    INSERT INTO logs_scan (
-                        id_qrcode, client_host, user_agent, date_scan, referer, accept_language,
-                        geo_country, geo_region, geo_city
-                    )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
-                    """,
-                    (
-                        id_qrcode, client_host, user_agent, date_vue, referer, language,
-                        geo_country, geo_region, geo_city # <-- AJOUTÉ
-                    )
-                )
+        
+        # --- 5. DÉLÉGUER l'enregistrement (au lieu du SQL ici) ---
+        
+        # 5.1. Incrémenter le compteur journalier via le StatistiqueService
+        stat_service.enregistrer_vue(id_qrcode, date_vue.date())
+        
+        # 5.2. Enregistrer le log détaillé via le LogScanService
+        log_service.enregistrer_log(
+            id_qrcode=id_qrcode,
+            client_host=client_host,
+            user_agent=user_agent,
+            referer=referer,
+            accept_language=language,
+            geo_country=geo_country,
+            geo_region=geo_region,
+            geo_city=geo_city
+        )
+        
+        # --- Fin de la logique d'enregistrement ---
 
         logger.info(f"Scan ENREGISTRÉ (QR suivi) pour QRCode {id_qrcode} depuis {client_host} ({geo_city}, {geo_country})")
 
+        # 6. Rediriger l'utilisateur
         return RedirectResponse(url=qr.url, status_code=307)
+    
     except HTTPException:
         raise
     except Exception as e:
         logger.exception("Erreur lors du scan : %s", e)
         raise HTTPException(status_code=500, detail=str(e))
+
 
 # -------------------------------------------------------------
 # 🔹 DÉTAILS QR PAR ID
@@ -276,96 +284,36 @@ async def image_qrcode(id_qrcode: int, qrcode_service: QRCodeService = Depends(g
 
     return FileResponse(file_path, media_type="image/png")
 
-
 # -------------------------------------------------------------
-# 🔹 STATISTIQUES D'UN QR CODE
+# 🔹 STATISTIQUES D'UN QR CODE (REFACTORISÉ)
 # -------------------------------------------------------------
 @app.get("/qrcode/{id_qrcode}/stats", tags=["Stats"])
-async def stats_qrcode(id_qrcode: int, detail: bool = True, qrcode_service: QRCodeService = Depends(get_qrcode_service)):
+async def stats_qrcode(
+    id_qrcode: int, 
+    detail: bool = True, 
+    qrcode_service: QRCodeService = Depends(get_qrcode_service),
+    stat_service: StatistiqueService = Depends(get_statistique_service) # Ajout du service
+):
     """
     Retourne les statistiques d'un QR:
     - total_vues: nombre total de vues
     - ...et plus
     """
-    qr = qrcode_service.dao.trouver_par_id(id_qrcode)
+    # 1. Vérification des droits (logique métier)
+    qr = qrcode_service.dao.trouver_par_id(id_qrcode) # (Vous accédez encore au DAO ici, c'est ok)
     if not qr:
         raise HTTPException(status_code=404, detail="QR code introuvable")
 
-    if qr.type is False:
+    if qr.type_qrcode is False:
         raise HTTPException(status_code=404, detail="Statistiques non disponibles pour un QR code non-suivi.")
 
-    with DBConnection().connection as conn:
-        with conn.cursor() as cur:
-            # Agrégats (Table 'statistique')
-            cur.execute(
-                """
-                SELECT
-                    COALESCE(SUM(nombre_vue), 0) AS total_vues,
-                    MIN(date_des_vues) AS premiere_vue,
-                    MAX(date_des_vues) AS derniere_vue
-                FROM statistique
-                WHERE id_qrcode = %s
-                """,
-                (id_qrcode,),
-            )
-            agg = cur.fetchone() or {"total_vues": 0, "premiere_vue": None, "derniere_vue": None}
-
-            result = {
-                "id_qrcode": id_qrcode,
-                "total_vues": int(agg["total_vues"] or 0),
-                "premiere_vue": agg["premiere_vue"].isoformat() if agg["premiere_vue"] else None,
-                "derniere_vue": agg["derniere_vue"].isoformat() if agg["derniere_vue"] else None,
-            }
-
-            if detail:
-                # Stats par jour (Table 'statistique')
-                cur.execute(
-                    """
-                    SELECT date_des_vues, nombre_vue
-                    FROM statistique
-                    WHERE id_qrcode = %s
-                    ORDER BY date_des_vues ASC
-                    """,
-                    (id_qrcode,),
-                )
-                rows = cur.fetchall() or []
-                result["par_jour"] = [
-                    {"date": r["date_des_vues"].isoformat(), "vues": int(r["nombre_vue"])}
-                    for r in rows
-                ]
-
-                # (Table 'logs_scan')
-                # --- MODIFICATION ICI : AJOUT DES COLONNES GÉO ---
-                cur.execute(
-                    """
-                    SELECT date_scan, client_host, user_agent, referer, accept_language,
-                           geo_country, geo_region, geo_city
-                    FROM logs_scan
-                    WHERE id_qrcode = %s
-                    ORDER BY date_scan DESC
-                    LIMIT 50
-                    """, 
-                    (id_qrcode,),
-                )
-                logs = cur.fetchall() or []
-                result["scans_recents"] = [
-                    {
-                        "timestamp": log["date_scan"].isoformat(), 
-                        "client": log["client_host"],
-                        "user_agent": log["user_agent"],
-                        "referer": log["referer"],
-                        "language": log["accept_language"],
-                        # --- AJOUTS GÉO ---
-                        "geo_country": log["geo_country"],
-                        "geo_region": log["geo_region"],
-                        "geo_city": log["geo_city"]
-                    }
-                    for log in logs
-                ]
-                # --- FIN DE LA MODIFICATION ---
-
-    return result
-
+    # 2. Appel du service (qui gère TOUTE la logique BDD)
+    try:
+        result = stat_service.get_statistiques_qr_code(id_qrcode, detail)
+        return result
+    except Exception as e:
+        logger.exception(f"Erreur inattendue lors de la récupération des stats : {e}")
+        raise HTTPException(status_code=500, detail="Erreur serveur lors de la récupération des statistiques.")
 
 
 # -------------------------------------------------------------

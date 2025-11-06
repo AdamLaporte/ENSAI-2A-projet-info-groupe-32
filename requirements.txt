@@ -163,3 +163,5 @@ wrapt==1.17.3
 xgboost==3.1.1
 yarl==1.22.0
 zipp==3.23.0
+
+pip install streamlit

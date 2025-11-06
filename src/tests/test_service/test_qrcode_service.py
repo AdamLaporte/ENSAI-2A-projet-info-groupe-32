@@ -152,3 +152,8 @@ def test_modifier_qrc_raises_unauthorized_when_owner_mismatch(fake_dao):
         service.modifier_qrc(20, "u1", url="x")
 
     fake_dao.trouver_qrc_par_id.assert_called_once_with(20)
+
+
+if __name__ == "__main__":
+    import pytest
+    pytest.main([__file__])

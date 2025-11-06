@@ -47,7 +47,7 @@ class QRCodeDao:
                                 qrcode.id_qrcode,
                                 qrcode.url,
                                 int(qrcode.id_proprietaire),
-                                qrcode.type,
+                                qrcode.type_qrcode,
                                 qrcode.couleur,
                                 qrcode.logo,
                             ),
@@ -62,7 +62,7 @@ class QRCodeDao:
                             (
                                 qrcode.url,
                                 int(qrcode.id_proprietaire),
-                                qrcode.type,
+                                qrcode.type_qrcode,
                                 qrcode.couleur,
                                 qrcode.logo,
                             ),
@@ -145,7 +145,7 @@ class QRCodeDao:
                 url=row["url"],
                 id_proprietaire=str(row["id_proprietaire"]),
                 date_creation=row["date_creation"],
-                type=row["type_qrcode"],
+                type_qrcode=row["type_qrcode"],
                 couleur=row["couleur"],
                 logo=row["logo"],
             )
@@ -184,7 +184,7 @@ class QRCodeDao:
                         url=r["url"],
                         id_proprietaire=str(r["id_proprietaire"]),
                         date_creation=r["date_creation"],
-                        type=r["type_qrcode"],
+                        type_qrcode=r["type_qrcode"],
                         couleur=r["couleur"],
                         logo=r["logo"],
                     )
@@ -254,7 +254,7 @@ class QRCodeDao:
                 url=updated["url"],
                 id_proprietaire=str(updated["id_proprietaire"]),
                 date_creation=updated["date_creation"],
-                type=updated["type_qrcode"],
+                type_qrcode=updated["type_qrcode"],
                 couleur=updated["couleur"],
                 logo=updated["logo"],
             )

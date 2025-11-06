@@ -215,7 +215,7 @@ class MenuUtilisateurVue(VueAbstraite):
                     # --- 2. Préparer les options pour la sélection ---
                     options = []
                     for q in mes_qr_data:
-                        suivi_str = "(Suivi)" if q.get("type") is True else "(Non-suivi)"
+                        suivi_str = "(Suivi)" if q.get("type_qrcode") is True else "(Non-suivi)"
                         url_tronquee = self._truncate(q.get('url', 'N/A'), max_len=50)
                         options.append(f"#{q.get('id_qrcode', '?')} {suivi_str} → {url_tronquee}")
                     
@@ -310,9 +310,9 @@ class MenuUtilisateurVue(VueAbstraite):
                     if filter_choice == "Tous":
                         filtered_list = qrs_data
                     elif filter_choice == "Uniquement les QR suivis":
-                        filtered_list = [q for q in qrs_data if q.get("type") is True]
+                        filtered_list = [q for q in qrs_data if q.get("type_qrcode") is True]
                     else: 
-                        filtered_list = [q for q in qrs_data if q.get("type") is False]
+                        filtered_list = [q for q in qrs_data if q.get("type_qrcode") is False]
 
                     if not filtered_list:
                         return MenuUtilisateurVue("Aucun QR code ne correspond à ce filtre.")
@@ -320,7 +320,7 @@ class MenuUtilisateurVue(VueAbstraite):
                     print("\nSélectionnez un QR code pour voir les détails :")
                     options = []
                     for q in filtered_list:
-                        suivi_str = "(Suivi)" if q.get("type") is True else "(Non-suivi)"
+                        suivi_str = "(Suivi)" if q.get("type_qrcode") is True else "(Non-suivi)"
                         options.append(f"#{q.get('id_qrcode', '?')} {suivi_str} → {q.get('url', 'N/A')}")
                     
                     selection = inquirer.select(
@@ -344,7 +344,7 @@ class MenuUtilisateurVue(VueAbstraite):
                     lignes.append(f"URL de destination: {selected_qr.get('url', 'N/A')}")
                     lignes.append(f"Date de création:   {self._format_date(selected_qr.get('date_creation'))}")
                     
-                    if selected_qr.get("type") is True:
+                    if selected_qr.get("type_qrcode") is True:
                         lignes.append(f"Type:               Suivi (Dynamique)")
                         lignes.append(f"URL de scan (encodée): {selected_qr.get('scan_url', 'N/A')}")
                         lignes.append(f"URL de l'image:     {selected_qr.get('image_url', 'N/A')}")
@@ -387,7 +387,7 @@ class MenuUtilisateurVue(VueAbstraite):
                     list_response.raise_for_status()
                     
                     mes_qr_data = list_response.json()
-                    qr_suivis = [q for q in mes_qr_data if q.get("type") is True]
+                    qr_suivis = [q for q in mes_qr_data if q.get("type_qrcode") is True]
                     
                     if not qr_suivis:
                         return MenuUtilisateurVue("Vous n'avez aucun QR code 'suivi' pour lequel voir des stats.")

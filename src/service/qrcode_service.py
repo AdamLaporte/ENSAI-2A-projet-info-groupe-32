@@ -42,7 +42,7 @@ class QRCodeService:
             url=url, # URL de destination finale
             id_proprietaire=id_proprietaire,
             date_creation=None,
-            type=type_, # bool : True = suivi, False = classique
+            type_qrcode=type_, # bool : True = suivi, False = classique
             couleur=couleur,
             logo=logo,
         )
@@ -147,13 +147,13 @@ class QRCodeService:
         regenerate_image = False
 
         nouvelle_url = url if url is not None else qr.url
-        nouveau_type = type_qrcode if type_qrcode is not None else qr.type
+        nouveau_type = type_qrcode if type_qrcode is not None else qr.type_qrcode
 
         if nouveau_type is False:
             # Cas 1: C'est (ou ça devient) un QR Statique.
             # L'image DOIT contenir l'URL de destination.
             
-            if (qr.type is True): # Il passe de Dynamique -> Statique
+            if (qr.type_qrcode is True): # Il passe de Dynamique -> Statique
                 regenerate_image = True
                 payload_url_a_encoder = nouvelle_url
             
@@ -174,7 +174,7 @@ class QRCodeService:
              # L'image DOIT contenir l'URL de scan.
              scan_url = f"{SCAN_BASE.rstrip('/')}/{qr.id_qrcode}"
 
-             if (qr.type is False): # Il passe de Statique -> Dynamique
+             if (qr.type_qrcode is False): # Il passe de Statique -> Dynamique
                 regenerate_image = True
                 payload_url_a_encoder = scan_url
              

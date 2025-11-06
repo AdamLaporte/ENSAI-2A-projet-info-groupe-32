@@ -65,3 +65,8 @@ def test_existe_token_true(mock_existe):
 def test_existe_token_false(mock_existe):
     mock_existe.return_value = False
     assert TokenService.existe_token("jeton2") is False
+
+
+if __name__ == "__main__":
+    import pytest
+    pytest.main([__file__])
