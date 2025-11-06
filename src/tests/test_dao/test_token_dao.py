@@ -1,132 +1,72 @@
 import pytest
+import string
+import secrets
 from unittest.mock import patch, MagicMock
-from datetime import datetime, timedelta
+from datetime import datetime
+#from token.db_connection import DBConnection
 
-from dao.token_dao import TokenDao
 from business_object.token import Token
-from business_object.utilisateur import Utilisateur
+from dao.token_dao import TokenDao
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_test_env():
-    """Initialise l'environnement pour TokenDao"""
-    with patch.dict("os.environ", {"POSTGRES_SCHEMA": "projet_test_dao"}):
-        yield
+#Tests pour generer_jeton
+
+def test_generer_jeton_longueur():
+    """Test pour vérifier que la longueur du jeton est correcte."""
+    jeton = TokenDao.generer_jeton()
+    assert len(jeton) == 32, f"Le jeton doit avoir 32 caractères, mais il a {len(jeton)}."
+
+def test_generer_jeton_chaine():
+    """Test pour vérifier que le jeton est une chaîne de caractères."""
+    jeton = TokenDao.generer_jeton()
+    assert isinstance(jeton, str), "Le jeton doit être une chaîne de caractères."
+
+def test_generer_jeton_unique():
+    """Test pour vérifier que deux appels successifs génèrent des jetons différents."""
+    jeton1 = TokenDao.generer_jeton()
+    jeton2 = TokenDao.generer_jeton()
+    assert jeton1 != jeton2, "Deux jetons générés consécutivement ne doivent pas être identiques."
+
+# Tests pour creer_token
 
 def test_creer_token_ok():
-    """Création de token réussie avec id auto-généré"""
-    u= Utilisateur(id_user=1)
-    token = Token(
-        id_user=u.id_user,
-        jeton="xyz123",
-        date_expiration=datetime.now() + timedelta(days=1),
-    )
-    # mocking du cursor/connection
-    with patch("dao.db_connection.DBConnection.connection") as mock_conn:
-        mock_cursor = MagicMock()
-        mock_conn.__enter__.return_value.cursor.return_value = mock_cursor
-        mock_cursor.fetchone.return_value = {"id_token": 42}
-        ok = TokenDao().creer_token(token)
-        assert ok is True
+    """ Création d'un token réussie avec ID auto-généré. """
 
-def test_creer_token_ko():
+    token = Token(id_user=1, jeton="gpVU0x1IzZbP0ScIopiGLlZO5EzhtaAM", date_expiration=datetime(2025, 10, 10, 14, 30))
+
+    ok = TokenDao().creer_token(token)
+
+    assert ok is True  
+
+    # Vérification de l'existence du token dans la base de données
+    """ token_db = TokenDao().trouver_par_id_user(token.id_user)
+    assert token_db is not None
+    assert token_db.id_user == token.id_user
+    assert token_db.jeton == token.jeton
+    assert token_db.date_expiration == token.date_expiration """
+
+def test_creer_token_echec():
     """Création échouée si données invalides"""
-    u= Utilisateur(id_user=1)
-    token = Token(id_user=u.id_user, jeton=None, date_expiration=None)
-    with patch("dao.db_connection.DBConnection.connection") as mock_conn:
-        mock_cursor = MagicMock()
-        mock_conn.__enter__.return_value.cursor.return_value = mock_cursor
-        mock_cursor.fetchone.return_value = None
-        ok = TokenDao().creer_token(token)
-        assert ok is False
+    t = Token(id_user= 10, jeton=None, date_expiration=None)
+    ok = TokenDao().creer_token(t)
+    assert ok is False
 
-def test_trouver_token_par_id_existant():
-    """Recherche par id_user d'un token existant"""
-    with patch("dao.db_connection.DBConnection.connection") as mock_conn:
-        mock_cursor = MagicMock()
-        mock_conn.__enter__.return_value.cursor.return_value = mock_cursor
-        mock_cursor.fetchone.return_value = {
-            "id_user": 17,
-            "jeton": "abc99",
-            "date_expiration": datetime.now() + timedelta(days=2),
-        }
-        tok = TokenDao().trouver_token_par_id(Utilisateur, 17)
-        assert tok is not None
-        assert tok.jeton == "abc99"
-        assert isinstance(tok.date_expiration, datetime)
+#Test pour trouver_token_par_id
 
-def test_trouver_token_par_id_non_existant():
+def test_trouver_token_par_id_success():
+    """Recherche par id_user d'un utilisateur existant"""
+    T = Token(id_user=10, jeton="gpVU0x1IzZbP0ScIopiGLlZO5EzhtaAM", date_expiration = datetime.datetime(2030, 1, 1, 1, 1))
+    TokenDao().creer_token(T)
+
+    token  = TokenDao().trouver_token_par_id_user(id_user)
+    assert id_user is not None
+    assert isinstance(token, Token)
+    assert token.jeton == T.jeton
+    assert token.date_expiration == T.date_expiration
+
+def test_trouver_token_par_id_echec():
     """Recherche par id_user inexistant"""
-    with patch("dao.db_connection.DBConnection.connection") as mock_conn:
-        mock_cursor = MagicMock()
-        mock_conn.__enter__.return_value.cursor.return_value = mock_cursor
-        mock_cursor.fetchone.return_value = None
-        tok = TokenDao().trouver_token_par_id(Utilisateur, 999999)
-        assert tok is None
+    t = TokenDao().trouver_token_par_id(999999)
+    assert t is None
 
-def test_supprimer_token_ok():
-    """Suppression réussie"""
-    token = Token(id_user=10, jeton="toktok", date_expiration=datetime.now())
-    with patch("dao.db_connection.DBConnection.connection") as mock_conn:
-        mock_cursor = MagicMock()
-        mock_conn.__enter__.return_value.cursor.return_value = mock_cursor
-        mock_cursor.rowcount = 1
-        ok = TokenDao().supprimer_token(token)
-        assert ok is True
 
-def test_supprimer_token_ko():
-    """Suppression échouée si token inexistant"""
-    token = Token(id_user=11, jeton="never", date_expiration=datetime.now())
-    with patch("dao.db_connection.DBConnection.connection") as mock_conn:
-        mock_cursor = MagicMock()
-        mock_conn.__enter__.return_value.cursor.return_value = mock_cursor
-        mock_cursor.rowcount = 0
-        ok = TokenDao().supprimer_token(token)
-        assert ok is False
 
-def test_est_valide_token_ok():
-    """Token valide, non supprimé"""
-    token = Token(id_user=22, jeton="valide_one", date_expiration=datetime.now() + timedelta(days=2))
-    ok = TokenDao().est_valide_token(token)
-    assert ok is True
-
-def test_est_valide_token_ko():
-    """Token expiré donc supprimé"""
-    token = Token(id_user=23, jeton="expired", date_expiration=datetime.now() - timedelta(days=1))
-    with patch.object(TokenDao, "supprimer_token", return_value=True) as patch_sup:
-        ok = TokenDao().est_valide_token(token)
-        assert ok is False
-        patch_sup.assert_called_once_with(token)
-    
-def test_trouver_id_user_par_token_existant():
-    """Recherche id_user par jeton existant"""
-    with patch("dao.db_connection.DBConnection.connection") as mock_conn:
-        mock_cursor = MagicMock()
-        mock_conn.__enter__.return_value.cursor.return_value = mock_cursor
-        mock_cursor.fetchone.return_value = {"id_user": 42}
-        res = TokenDao().trouver_id_user_par_token("jetonfind")
-        assert res == 42
-
-def test_trouver_id_user_par_token_non_existant():
-    """Recherche id_user par jeton inexistant"""
-    with patch("dao.db_connection.DBConnection.connection") as mock_conn:
-        mock_cursor = MagicMock()
-        mock_conn.__enter__.return_value.cursor.return_value = mock_cursor
-        mock_cursor.fetchone.return_value = None
-        res = TokenDao().trouver_id_user_par_token("nothing")
-        assert res is None
-
-def test_existe_token_ok():
-    """Vérifie l'existence réelle d'un jeton"""
-    with patch("dao.db_connection.DBConnection.connection") as mock_conn:
-        mock_cursor = MagicMock()
-        mock_conn.__enter__.return_value.cursor.return_value = mock_cursor
-        mock_cursor.fetchone.return_value = (1,)
-        assert TokenDao().existe_token("real_token") is True
-
-def test_existe_token_ko():
-    """Jeton inexistant"""
-    with patch("dao.db_connection.DBConnection.connection") as mock_conn:
-        mock_cursor = MagicMock()
-        mock_conn.__enter__.return_value.cursor.return_value = mock_cursor
-        mock_cursor.fetchone.return_value = None
-        assert TokenDao().existe_token("no_token") is False

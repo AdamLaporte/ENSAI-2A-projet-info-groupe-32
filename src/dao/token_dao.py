@@ -8,9 +8,30 @@ from dao.db_connection import DBConnection
 from business_object.token import Token
 from business_object.utilisateur import Utilisateur
 
+import secrets
+import string
 
 class TokenDao(metaclass=Singleton):
     """Classe contenant les méthodes pour accéder aux Tokens de la base de données"""
+    
+    def generer_jeton(longueur=32):
+        """ Génère un jeton d'authentification sécurisé.
+    
+        Attributs:
+        ----------
+        longueur :int
+            Longueur du jeton (par défaut 32 caractères)
+    
+        Returns:
+        --------
+        str
+            Jeton d'authentification aléatoire
+        """
+        # Utilise secrets pour une génération cryptographiquement sécurisée
+        caracteres = string.ascii_letters + string.digits
+        jeton = ''.join(secrets.choice(caracteres) for _ in range(longueur))
+        return jeton
+
 
     @log
     def creer_token(self, token: Token): 
@@ -26,7 +47,7 @@ class TokenDao(metaclass=Singleton):
             True si la création est un succès
             False sinon
         """
-        #difference entre attributs et parameters ?
+        
         res = None
         try:
             with DBConnection().connection as connection:
@@ -44,28 +65,32 @@ class TokenDao(metaclass=Singleton):
                         },
                     )
                     res = cursor.fetchone()
+                    if res:
+                        created = True
+                        id_token = res[0]  # id_token renvoyé par la base de données
+                        logging.info(f"Token créé avec succès, ID du token : {id_token}")
+                    else:
+                        created = False
+                        logging.error("Échec de la création du token : aucune réponse retournée.")
         except Exception as e:
-            logging.info(e)
-
-        created = False
-        if res:
-            created = True
-
+            created = False
+            logging.error(f"Erreur lors de la création du token : {e}")
+    
         return created
 
     @log
-    def trouver_token_par_id(self, Utilisateur, id_user:str): #comment j'importe utilisateur 
-        """Trouver un token grâce à son id_user
+    def trouver_token_par_id(self, id_user:str): 
 
-        Attributs
+        """Attributs
         ----------
-        u.id_user : int
-            identifiant du token à trouver
+        id_user : int
+            Identifiant du token à trouver.
 
         Returns
         -------
         token : Token
-            Renvoie le token correspondant à l'id_user None s'il n'existe pas
+            Renvoie le token correspondant à l'id_user, 
+            None s'il n'existe pas
         """
         try:
             with DBConnection().connection as connection:
@@ -89,6 +114,7 @@ class TokenDao(metaclass=Singleton):
             )
 
         return token
+
 
     def supprimer_token(self, token: Token) -> bool:
         """
