@@ -72,7 +72,7 @@ def test_modifier_stat_ok():
     id_qrcode = randint(1,9999)
     nbr_vue = 2
     date_des_vues = [date(2025,10,21), date(2025,11,2)]
-    s = Statistique(iq_qrcode=id_qrcode, nombre_vue=nbr_vue, date_des_vues=date_des_vues)
+    s = Statistique(id_qrcode=id_qrcode, nombre_vue=nbr_vue, date_des_vues=date_des_vues)
     StatistiqueDao().creer_statistique(s)
 
     # Modifie son nbr_vue et date_des_vues
@@ -81,12 +81,29 @@ def test_modifier_stat_ok():
     assert StatistiqueDao().modifier_statistique(s) is not None
 
     # Vérifier en base
-    s_db = StatistiqueDao().trouver_par_id_qrcode(s.id_qrcode) #id_qrcode p-ê à changer
+    s_db = StatistiqueDao().trouver_par_id_stat(s.id_stat)
     assert s_db is not None
-    assert s_db.nombre_vue != "new_pwd"  # bien hashé
+    assert s_db == 3
+    assert s_db.date_des_vues == [date(2025,10,21), date(2025,11,2), date(2025,11,5)]
 
-def test_modifier_user_ko():
-    """Modification échouée (id_user inexistant)"""
-    u = Utilisateur(id_user=999999, nom_user="no_user", mdp=hash_password("pwd", "no_user"))
-    ok = UtilisateurDao().modifier_user(u)
+def test_modifier_stat_ko():
+    """Modification échouée (id_qrcode inexistant)"""
+    s = Statistique(id_qrcode=999999, nombre_vue=1, date_des_vues=[date(2025,11,2)])
+    ok = StatistiqueDao().modifier_statistique(s)
+    assert ok is False
+
+def test_supprimer_ok():
+    """Suppression réussie"""
+    nom_user = "to_delete"
+    u = Utilisateur(nom_user=nom_user, mdp=hash_password("pwd", nom_user))
+    UtilisateurDao().creer_user(u)
+
+    ok = UtilisateurDao().supprimer(u)
+    assert ok is True
+    assert UtilisateurDao().trouver_par_id_user(u.id_user) is None
+
+def test_supprimer_ko():
+    """Suppression échouée (id inexistant)"""
+    u = Utilisateur(id_user=999999, nom_user="ghost", mdp="irrelevant")
+    ok = UtilisateurDao().supprimer(u)
     assert ok is False
