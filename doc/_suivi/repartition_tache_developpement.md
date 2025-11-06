@@ -35,7 +35,8 @@ relecture syntaxe, doc code propre
 adapter les tests 
 token 
 rapport
-
+chnager pour pouvoir mettre n'importe quoi pas que des http dans les url des qrcodes 
+verifier que il y a du sql que dans les dao 
 
 questions profs :
 

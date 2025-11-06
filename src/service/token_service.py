@@ -47,7 +47,7 @@ class TokenService:
         nouveau_token = Token(
             id_user=id_user,
             jeton=TokenService.generer_jeton(),
-            date_expiration = datetime.now() + timedelta(hours=1) #le jeton est valide une heure 
+            date_expiration = datetime.now() + timedelta(hours=5) #le jeton est valide une heure 
         )
         return nouveau_token if TokenDao().creer_token(nouveau_token) else None
 
