@@ -8,7 +8,7 @@ class Qrcode:
 
     Utilisation des @property pour exposer un accès contrôlé aux attributs.
     - id_qrcode et date_creation sont en lecture seule (générés côté service/BDD).
-    - url, type_qrcode, couleur et logo sont modifiables via les setters avec validation.
+    - url, type, couleur et logo sont modifiables via les setters avec validation.
     """
 
     def __init__(
@@ -17,7 +17,7 @@ class Qrcode:
         url: str,
         id_proprietaire: str,
         date_creation: Optional[datetime] = None,
-        type_qrcode: bool = True,
+        type: bool = True,
         couleur: Optional[str] = None,
         logo: Optional[str] = None,
     ):
@@ -27,7 +27,7 @@ class Qrcode:
             url: URL liée au QR code.
             id_proprietaire: identifiant du propriétaire (string).
             date_creation: datetime de création (None pour laisser la DB/Service la définir).
-            type_qrcode: True si QR suivi, False si QR simple.
+            type: True si QR suivi, False si QR simple.
             couleur: couleur optionnelle.
             logo: chemin/nom du logo optionnel.
         """
@@ -42,7 +42,7 @@ class Qrcode:
 
         # Utiliser les setters pour valider les valeurs initiales
         self.url = url
-        self.type_qrcode = type_qrcode
+        self.type = type
         if couleur is not None:
             self.couleur = couleur
         if logo is not None:
@@ -83,13 +83,13 @@ class Qrcode:
     @property
     def type(self) -> bool:
         """Type du QR code (True = suivi, False = simple)."""
-        return self._type_qrcode
+        return self._type
 
     @type.setter
     def type(self, t: bool) -> None:
         if not isinstance(t, bool):
-            raise TypeError("Le champ 'type_qrcode' doit être un booléen.")
-        self._type_qrcode = t
+            raise TypeError("Le champ 'type' doit être un booléen.")
+        self._type = t
 
     @property
     def couleur(self) -> Optional[str]:
@@ -119,7 +119,7 @@ class Qrcode:
         "url": self.url,
         "id_proprietaire": self.id_proprietaire,
         "date_creation": self.date_creation.isoformat() if self.date_creation else None,
-        "type_qrcode": self.type_qrcode,
+        "type": self.type,
         "couleur": self.couleur,
         "logo": self.logo,
         }
@@ -130,9 +130,7 @@ class Qrcode:
             f"owner={self._id_proprietaire!r}, date_creation={self._date_creation!r})"
         )    
 
-    # -------------------
-    # Utilitaires
-    # -------------------
+    
 
 
 
