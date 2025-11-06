@@ -1,198 +1,92 @@
-# tests/test_qrcode_dao.py
+
+import os
 from unittest.mock import MagicMock, patch
 import pytest
 from datetime import datetime
 
 
+from utils.reset_database import ResetDatabase
 from dao.qrcode_dao import QRCodeDao, QRCodeNotFoundError, UnauthorizedError
 from business_object.qr_code import Qrcode
 
 
-def make_cm(fetchall=None, fetchone=None, rowcount=1):
+@pytest.fixture(scope="session", autouse=True)
+def setup_test_environment():
     """
-    Crée un context manager simulé retournant un 'cursor' mock avec fetchall/fetchone/rowcount.
+    Initialise une base dédiée aux tests d'intégration.
+    On force le schéma projet_test_dao pour éviter d'utiliser les vraies données.
     """
-    cursor = MagicMock()
-    cursor.fetchall.return_value = fetchall if fetchall is not None else []
-    cursor.fetchone.return_value = fetchone
-    cursor.rowcount = rowcount
-    cm = MagicMock()
-    # when "with conn.cursor() as cur:" => cur is cursor
-    cm.__enter__.return_value = cursor
-    cm.__exit__.return_value = False
-    return cm, cursor
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setenv("POSTGRES_SCHEMA", "projet_test_dao")
+        ResetDatabase().lancer(test_dao=True)
+        yield
 
 
-def make_qrcode(id_qrcode=1, url="https://ex.com", owner="user-1"):
-    return Qrcode(
-        id_qrcode=id_qrcode,
-        url=url,
-        id_proprietaire=owner,
-        date_creation=datetime.utcnow(),
-        type=True,
+def test_creer_qrc_without_id_returns_qrcode():
+    dao = QRCodeDao()
+    q = Qrcode(
+        id_qrcode=None, 
+        url="https://ex.com",
+        id_proprietaire=3,
+        type_qrcode=True,
         couleur="bleu",
-        logo="logo.png",
+        logo=None,
     )
 
-
-# -------------------------
-# Tests
-# -------------------------
-
-@patch("dao.qrcode_dao.DBConnection")
-def test_creer_qrc_without_id_returns_qrcode(mock_db_conn):
-    """
-    Cas : qrcode.id_qrcode None -> INSERT sans id ; la DB renvoie une ligne (fetchone)
-    """
-    fake_conn = MagicMock()
-    # retourne un tuple (id_qrcode, date_creation)
-    cm, cur = make_cm(fetchone=(11, datetime(2025, 10, 29)))
-    fake_conn.cursor.return_value = cm
-    fake_conn.__enter__.return_value = fake_conn
-    mock_db_conn.return_value.connection = fake_conn
-
-    dao = QRCodeDao()
-    q = make_qrcode(id_qrcode=None)
     res = dao.creer_qrc(q)
 
     assert isinstance(res, Qrcode)
-    assert res.id_qrcode == 11
+    assert res.id_qrcode is not None  # auto-généré en DB
     assert isinstance(res.date_creation, datetime)
-    cur.execute.assert_called_once()
-    fake_conn.cursor.assert_called_once()
 
 
-@patch("dao.qrcode_dao.DBConnection")
-def test_trouver_qrc_par_id_qrc_returns_qrcode_when_found(mock_db_conn):
-    row = {
-        "id_qrcode": 5,
-        "url": "https://found",
-        "id_proprietaire": "owner",
-        "date_creation": datetime.utcnow(),
-        "type": True,
-        "couleur": "rouge",
-        "logo": "logo.png",
-    }
-    fake_conn = MagicMock()
-    cm, cur = make_cm(fetchone=row)
-    fake_conn.cursor.return_value = cm
-    fake_conn.__enter__.return_value = fake_conn
-    mock_db_conn.return_value.connection = fake_conn
-
+def test_trouver_qrc_par_id_qrc_returns_qrcode_when_found():
     dao = QRCodeDao()
-    res = dao.trouver_qrc_par_id_qrc(5)
 
-    assert isinstance(res, Qrcode)
-    assert res.id_qrcode == 5
-    cur.execute.assert_called_once()
+    # Créer d'abord un QR pour être sûr qu'il existe
+    created = dao.creer_qrc(Qrcode(id_qrcode=None, url= "https://test", id_proprietaire= 3))
+    found = dao.trouver_qrc_par_id_qrc(created.id_qrcode)
+
+    assert isinstance(found, Qrcode)
+    assert found.id_qrcode == created.id_qrcode
 
 
-@patch("dao.qrcode_dao.DBConnection")
-def test_trouver_qrc_par_id_qrc_returns_none_when_missing(mock_db_conn):
-    fake_conn = MagicMock()
-    cm, cur = make_cm(fetchone=None)
-    fake_conn.cursor.return_value = cm
-    fake_conn.__enter__.return_value = fake_conn
-    mock_db_conn.return_value.connection = fake_conn
-
+def test_trouver_qrc_par_id_qrc_returns_none_when_missing():
     dao = QRCodeDao()
-    res = dao.trouver_qrc_par_id_qrc(9999)
-
+    res = dao.trouver_qrc_par_id_qrc(99999999)
     assert res is None
-    cur.execute.assert_called_once()
 
 
-@patch("dao.qrcode_dao.DBConnection")
-def test_modifier_qrc_success(mock_db_conn):
-    # simulate SELECT owner then UPDATE returning row
-    fake_conn = MagicMock()
-    # first fetchone for SELECT returns owner row
-    # second fetchone for UPDATE RETURNING returns updated row
-    cm_select, cur_select = make_cm(fetchone={"id_proprietaire": "u1"})
-    cm_update, cur_update = make_cm(fetchone={
-        "id_qrcode": 10,
-        "url": "https://new",
-        "id_proprietaire": "u1",
-        "date_creation": datetime.utcnow(),
-        "type": True,
-        "couleur": "vert",
-        "logo": "logo.png",
-    })
-    # We need conn.cursor() to return a context manager that yields a cursor.
-    # Simpler: make a cursor whose fetchone behavior changes between calls.
-    cm, cur = make_cm()
-    # configure cur.fetchone to return first the select result, then the update result
-    cur.fetchone.side_effect = [{"id_proprietaire": "u1"},
-                                {
-        "id_qrcode": 10,
-                                    "url": "https://new",
-                                    "id_proprietaire": "u1",
-                                    "date_creation": datetime.utcnow(),
-                                    "type": True,
-                                    "couleur": "vert",
-                                    "logo": "logo.png",
-    }]
-    fake_conn.cursor.return_value = cm
-    fake_conn.__enter__.return_value = fake_conn
-    mock_db_conn.return_value.connection = fake_conn
-
+def test_modifier_qrc_success():
     dao = QRCodeDao()
-    updated = dao.modifier_qrc(10, "u1", url="https://new")
+
+    q = dao.creer_qrc(Qrcode(id_qrcode=None, url= "https://old", id_proprietaire=3))
+    updated = dao.modifier_qrc(q.id_qrcode, 3, url="https://new")
 
     assert isinstance(updated, Qrcode)
     assert updated.url == "https://new"
-    assert updated.id_proprietaire == "u1"
-    assert cur.execute.call_count >= 2  # SELECT then UPDATE
 
 
-@patch("dao.qrcode_dao.DBConnection")
-def test_modifier_qrc_raises_not_found(mock_db_conn):
-    fake_conn = MagicMock()
-    # SELECT returns None
-    cm, cur = make_cm(fetchone=None)
-    fake_conn.cursor.return_value = cm
-    fake_conn.__enter__.return_value = fake_conn
-    mock_db_conn.return_value.connection = fake_conn
-
+def test_modifier_qrc_raises_not_found():
     dao = QRCodeDao()
     with pytest.raises(QRCodeNotFoundError):
-        dao.modifier_qrc(12345, "u1", url="x")
+        dao.modifier_qrc(123456789, "u1", url="x")
 
 
-@patch("dao.qrcode_dao.DBConnection")
-def test_modifier_qrc_raises_unauthorized(mock_db_conn):
-    fake_conn = MagicMock()
-    # SELECT returns owner different from caller
-    cm, cur = make_cm(fetchone={"id_proprietaire": "other"})
-    fake_conn.cursor.return_value = cm
-    fake_conn.__enter__.return_value = fake_conn
-    mock_db_conn.return_value.connection = fake_conn
-
+def test_modifier_qrc_raises_unauthorized():
     dao = QRCodeDao()
+
+    q = dao.creer_qrc(Qrcode(id_qrcode=None,url= "https://secure", id_proprietaire=3))
     with pytest.raises(UnauthorizedError):
-        dao.modifier_qrc(7, "u1", url="x")
+        dao.modifier_qrc(id_qrcode=q.id_qrcode, url="x", id_user=4)
 
 
-@patch("dao.qrcode_dao.DBConnection")
-def test_supprimer_returns_true_or_false(mock_db_conn):
-    fake_conn = MagicMock()
-    # first case: rowcount > 0
-    cm1, cur1 = make_cm(rowcount=1)
-    fake_conn.cursor.return_value = cm1
-    fake_conn.__enter__.return_value = fake_conn
-    mock_db_conn.return_value.connection = fake_conn
-
+def test_supprimer_returns_true_or_false():
     dao = QRCodeDao()
-    q = make_qrcode(id_qrcode=200)
-    assert dao.supprimer(q) is True
 
-    # second case: rowcount == 0
-    fake_conn2 = MagicMock()
-    cm2, cur2 = make_cm(rowcount=0)
-    fake_conn2.cursor.return_value = cm2
-    fake_conn2.__enter__.return_value = fake_conn2
-    mock_db_conn.return_value.connection = fake_conn2
+    # cas supprimé
+    q1 = dao.creer_qrc(Qrcode(id_qrcode=None, url="https://todel",id_proprietaire= 3))
+    assert dao.supprimer_qrc(q1.id_qrcode) 
 
-    dao2 = QRCodeDao()
-    q2 = make_qrcode(id_qrcode=201)
-    assert dao2.supprimer(q2) is False
+    # cas échec
+    assert dao.supprimer_qrc(999999) is False

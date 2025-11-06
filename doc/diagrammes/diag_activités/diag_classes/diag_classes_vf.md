@@ -72,7 +72,7 @@ classDiagram
      class QRCodeService {
         +creer_qrc(url : str, type: bool, couleur : str, logo : str): QRCode
         +trouver_qrc_par_id_user(id_user : str): list[QRCode]
-        +supprimer_qrc(QRCode): bool
+        +supprimer_qrc(id_qrcode, id_user): bool
         +verifier_proprietaire(QRCode, id_user: str): bool
         +trouver_qrc_par_id_qrc(id_user : str): Qrcode | None
     }
@@ -80,7 +80,7 @@ classDiagram
     class QRCodeDao {
         +creer_qrc(QRCode): QRCode
         +trouver_qrc_par_id(id_user: str): list[QRCode]
-        +supprimer(QRCode): bool
+        +supprimer(id_qrcode): bool
         +modifier(QRCode):QRCode
     }
     
