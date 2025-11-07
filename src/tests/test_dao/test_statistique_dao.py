@@ -31,7 +31,7 @@ def test_creer_stat_ok():
 
     ok = StatistiqueDao().creer_statistique(s)
     assert ok is True
-    assert isinstance(s.id_stat, int) and u.id_stat > 0
+    assert isinstance(s.id_stat, int) and s.id_stat > 0
 
     # Vérifier existence par id
     s_db = StatistiqueDao().trouver_par_id_qrcode(s.id_qrcode)

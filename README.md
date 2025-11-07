@@ -1,258 +1,237 @@
-# ENSAI-2A-projet-info-template
+# ENSAI-2A-Projet-Info-Groupe-32 (QR Code Tracking)
 
-Template for the ENSAI 2nd year IT project.
+Ce projet est une application complète de génération et de suivi de QR codes, réalisée dans le cadre du projet informatique de 2A à l'ENSAI.
 
-This very simple application includes a few elements that may help with the info 2A project:
+Cette application met en œuvre plusieurs concepts clés :
 
-- Layer programming (DAO, service, view, business_object)
-- Connection to a database
-- Terminal interface (view layer) with [inquirerPy](https://inquirerpy.readthedocs.io/en/latest/)
-- Calling a Webservice
-- Creating a webservice
+  - Programmation en couches (DAO, Service, View, Business\_Object)
+  - Connexion à une base de données **PostgreSQL**
+  - Une interface en ligne de commande (CLI) avec [inquirerPy](https://inquirerpy.readthedocs.io/en/latest/)
+  - Une **API Webservice** (back-end) créée avec [FastAPI](https://fastapi.tiangolo.com/)
+  - La génération de QR codes (statiques et dynamiques)
+  - Le suivi statistique (scans, géolocalisation) pour les QR codes dynamiques
 
+## :arrow\_forward: Software and tools
 
-## :arrow_forward: Software and tools
+  - [Visual Studio Code](https://code.visualstudio.com/)
+  - [Python 3.13](https://www.python.org/) (ou 3.10+)
+  - [Git](https://git-scm.com/)
+  - Une base de données [PostgreSQL](https://www.postgresql.org/)
 
-- [Visual Studio Code](https://code.visualstudio.com/)
-- [Python 3.13](https://www.python.org/)
-- [Git](https://git-scm.com/)
-- A [PostgreSQL](https://www.postgresql.org/) database
+## :arrow\_forward: Clone the repository
 
-
-## :arrow_forward: Clone the repository
-
-- [ ] Open VSCode
-- [ ] Open **Git Bash**
-- [ ] Clone the repo
-  - `git clone https://github.com/ludo2ne/ENSAI-2A-projet-info-template.git`
-
+  - [ ] Ouvrir VSCode
+  - [ ] Ouvrir **Git Bash**
+  - [ ] Cloner le dépôt
+      - `git clone [URL_DE_VOTRE_DEPOT_GIT]`
 
 ### Open Folder
 
-- [ ] Open **Visual Studio Code**
-- [ ] File > Open Folder
-- [ ] Select folder *ENSAI-2A-projet-info-template*
-  - *ENSAI-2A-projet-info-template* should be the root of your Explorer
-  - :warning: if not the application will not launch. Retry open folder
-
+  - [ ] Ouvrir **Visual Studio Code**
+  - [ ] File \> Open Folder
+  - [ ] Sélectionner le dossier du projet (ex: `ENSAI-2A-projet-info-groupe-32`)
+      - Le dossier doit être à la racine de votre Explorateur
+      - :warning: Sinon, l'application ne se lancera pas.
 
 ## Repository Files Overview
 
-
-| Item                       | Description                                                              |
+| Item | Description |
 | -------------------------- | ------------------------------------------------------------------------ |
-| `README.md`                | Provides useful information to present, install, and use the application |
-| `LICENSE`                  | Specifies the usage rights and licensing terms for the repository        |
+| `README.md` | Fournit les informations utiles pour présenter, installer et utiliser l'application |
+| `LICENSE` | Spécifie les droits d'utilisation et les termes de la licence du dépôt |
 
 ### Configuration files
 
-This repository contains a large number of configuration files for setting the parameters of the various tools used.
+Ce dépôt contient un grand nombre de fichiers de configuration pour paramétrer les différents outils utilisés.
 
-
-
-
-| Item                       | Description                                                              |
+| Item | Description |
 | -------------------------- | ------------------------------------------------------------------------ |
-| `.github/workflows/ci.yml` | Automated workflow that runs predefined tasks (like testing, linting, or deploying) |
-| `.vscode/settings.json`    | Contains VS Code settings specific to this project                       |
-| `.coveragerc`              | Setup for test coverage                                                  |
-| `.gitignore`               | Lists the files and folders that should not be tracked by Git            |
-| `logging_config.yml`       | Setup for logging                                                        |
-| `requirements.txt`         | Lists the required Python packages for the project                       |
+| `.github/workflows/ci.yml` | Workflow automatisé qui exécute des tâches prédéfinies (tests, linting...) |
+| `.vscode/settings.json` | Contient les paramètres de VS Code spécifiques à ce projet |
+| `.coveragerc` | Configuration pour la couverture de test |
+| `.gitignore` | Liste les fichiers et dossiers qui ne doivent pas être suivis par Git |
+| `logging_config.yml` | Configuration pour les logs |
+| `requirements.txt` | Liste les packages Python requis pour le projet |
 
-You will also need a `.env` file. See below.
-
+Vous aurez également besoin d'un fichier `.env`. Voir ci-dessous.
 
 ### Folders
 
-| Item                       | Description                                                              |
+| Item | Description |
 | -------------------------- | ------------------------------------------------------------------------ |
-| `data`                     | SQL script containing data sets                                          |
-| `doc`                      | UML diagrams, project status...                                          |
-| `logs`                     | Containing logs files (once you have launched the application)           |
-| `src`                      | Folder containing Python files organized using a layered architecture    |
+| `data` | Scripts SQL contenant les jeux de données (création et peuplement) |
+| `doc` | Diagrammes UML, suivi du projet, rapport d'analyse... |
+| `logs` | Contient les fichiers de logs (une fois l'application lancée) |
+| `src` | Dossier contenant les fichiers Python organisés en architecture en couches |
 
+## :arrow\_forward: Install required packages
 
+  - [ ] Dans Git Bash, lancer les commandes suivantes pour :
+      - installer tous les packages du fichier `requirements.txt`
+      - lister tous les packages
 
-### Settings files
-
-This repository contains a large number of configuration files for setting the parameters of the various tools used.
-
-Normally, for the purposes of your project, you won't need to modify these files, except for `.env` and `requirements.txt`.
-
-
-## :arrow_forward: Install required packages
-
-- [ ] In Git Bash, run the following commands to:
-  - install all packages from file `requirements.txt`
-  - list all packages
+<!-- end list -->
 
 ```bash
 pip install -r requirements.txt
 pip list
 ```
 
+## :arrow\_forward: Environment variables
 
-## :arrow_forward: Environment variables
+Vous allez maintenant définir les variables d'environnement pour déclarer la base de données et l'API.
 
-You are now going to define environment variables to declare the database and webservice to which you are going to connect your python application.
+À la racine du projet :
 
-At the root of the project :
+  - [ ] Créer un fichier nommé `.env`
+  - [ ] Coller et compléter les éléments ci-dessous
 
-- [ ] Create a file called `.env`
-- [ ] Paste in and complete the elements below
+<!-- end list -->
 
-```default
-WEBSERVICE_HOST=https://pokeapi.co/api/v2
-
+```.env
+# --- Configuration de la base de données ---
 POSTGRES_HOST=sgbd-eleves.domensai.ecole
 POSTGRES_PORT=5432
 POSTGRES_DATABASE=idxxxx
 POSTGRES_USER=idxxxx
 POSTGRES_PASSWORD=idxxxx
 POSTGRES_SCHEMA=projet
+
+# --- Configuration de l'API FastAPI ---
+# Port sur lequel le serveur uvicorn écoutera
+PORT=5000
+
+# URL de base de l'API (pour la redirection et l'affichage des images)
+# Doit correspondre à l'URL où votre API est accessible
+BASE_URL="http://127.0.0.1:5000"
+
+# URL de scan (celle qui sera encodée dans le QR code suivi)
+# Elle doit pointer vers votre API, sur la route /scan
+SCAN_BASE_URL="http://127.0.0.1:5000/scan"
+
+# Dossier de sortie pour les images PNG des QR codes
+QRCODE_OUTPUT_DIR="static/qrcodes"
 ```
 
+## :arrow\_forward: Unit tests
 
-## :arrow_forward: Unit tests
-
-- [ ] In Git Bash: `pytest -v` 
-  - or `python -m pytest -v` if *pytest* has not been added to *PATH*
-
+  - [ ] Dans Git Bash: `pytest -v`
+      - ou `python -m pytest -v` si *pytest* n'a pas été ajouté au *PATH*
 
 ### TU DAO
 
-To ensure tests are repeatable, safe, and **do not interfere with the real database**, we use a dedicated schema for unit testing.
+Pour garantir que les tests sont répétables, sûrs et **n'interfèrent pas avec la base de données réelle**, nous utilisons un schéma dédié pour les tests unitaires (`projet_test_dao`).
 
-The DAO unit tests use data from the `data/pop_db_test.sql` file.
-
-This data is loaded into a separate schema (projet_test_dao) so as not to pollute the other data.
-
+Les tests unitaires DAO utilisent les données du fichier `data/pop_db_test.sql`.
 
 ### Test coverage
 
-It is also possible to generate test coverage using [Coverage](https://coverage.readthedocs.io/en/7.4.0/index.html)
+Il est également possible de générer la couverture de test en utilisant [Coverage](https://coverage.readthedocs.io/en/7.4.0/index.html).
 
-:bulb: The `.coveragerc` file can be used to modify the settings
+:bulb: Le fichier `.coveragerc` peut être utilisé pour modifier les paramètres.
 
-- [ ] `coverage run -m pytest`
-- [ ] `coverage report -m`
-- [ ] `coverage html`
-  - Download and open coverage_report/index.html
+  - [ ] `coverage run -m pytest`
+  - [ ] `coverage report -m`
+  - [ ] `coverage html`
+      - Télécharger et ouvrir coverage\_report/index.html
 
+## :arrow\_forward: Launch the CLI application
 
+Cette application fournit une interface graphique basique dans le terminal pour naviguer entre les différents menus.
 
-## :arrow_forward: Launch the CLI application
+  - [ ] Dans Git Bash: `python src/main.py`
+  - [ ] Au premier lancement, choisir **Ré-initialiser la base de données**
+      - cela appelle le programme `src/utils/reset_database.py`
+      - qui exécutera lui-même les scripts SQL du dossier `data` (`init_db.sql` et `pop_db.sql`)
 
-This application provides a very basic graphical interface for navigating between different menus.
+## :arrow\_forward: Launch the webservice (API)
 
-- [ ] In Git Bash: `python src/main.py`
-- [ ] On first launch, choose **Reset database**
-  - this calls the `src/utils/reset_database.py` program
-  - which will itself execute the SQL scripts in the `data` folder
+L'application principale est un webservice (API).
 
+  - [ ] `python src/app.py`
 
-
-## :arrow_forward: Launch the webservice
-
-This application can also be used to create a webservice.
-
-- [ ] `python src/app.py`
+Le serveur est maintenant lancé (par défaut sur `http://127.0.0.1:5000`).
 
 Documentation :
 
-- /docs
-- /redoc
+  - **Swagger UI (Interactif) : [http://127.0.0.1:5000/docs](https://www.google.com/search?q=http://127.0.0.1:5000/docs)**
+  - **ReDoc : [http://127.0.0.1:5000/redoc](https://www.google.com/search?q=http://127.0.0.1:5000/redoc)**
 
 ### Endpoints
 
-Examples of endpoints (to be tested, for example, with *Insomnia* or a browser):
+Exemples d'endpoints (à tester avec *Insomnia*, un navigateur, ou via l'application CLI) :
 
+  - `GET /scan/{id_qrcode}`
 
-- `GET http://localhost/joueur`
-- `GET http://localhost/joueur/3`
-- ```
-  POST http://localhost/joueur/
-  JSON body :
-    {
-      "pseudo": "patapouf",
-      "mdp": "9999",
-      "age": "95",
-      "mail": "patapouf@mail.fr",
-      "fan_pokemon": true
-    }
-  ```
-- ```
-  PUT http://localhost/joueur/3
-  JSON body :
-    {
-       "pseudo": "maurice_new",
-       "mdp": null,
-       "age": 20,
-       "mail": "maurice@ensai.fr",
-       "fan_pokemon": true
-    }
-  ```
-- `DELETE http://localhost/joueur/5`
+      - Route principale pour le scan, enregistre la vue et redirige.
 
+  - `POST /qrcode/`
 
+      - **Body JSON :**
+        ```json
+        {
+          "url": "https://www.ensai.fr",
+          "id_proprietaire": "1",
+          "type_qrcode": true,
+          "couleur": "blue"
+        }
+        ```
 
-## :arrow_forward: Logs
+  - `GET /qrcode/utilisateur/{id_user}`
 
-It is initialised in the `src/utils/log_init.py` module:
+      - Récupère tous les QR codes de l'utilisateur.
 
-- This is called when the application or webservice is started.
-- It uses the `logging_config.yml` file for configuration.
-  - to change the log level :arrow_right: *level* tag
+  - `GET /qrcode/{id_qrcode}/stats`
 
-A decorator has been created in `src/utils/log_decorator.py`.
+      - Récupère les statistiques d'un QR code (total, par jour, logs récents).
 
-When applied to a method, it will display in the logs :
+  - `GET /qrcode/{id_qrcode}/image`
 
-- input parameters
-- the output
+      - Renvoie le fichier image PNG du QR code.
 
-The logs can be viewed in the `logs` folder.
+  - `DELETE /qrcode/{id_qrcode}?id_user=1`
 
-Example of logs :
+      - Supprime un QR code (vérifie que `id_user` est propriétaire).
 
-```
-07/08/2024 09:07:07 - INFO     - ConnexionVue
-07/08/2024 09:07:08 - INFO     -     JoueurService.se_connecter('a', '*****') - DEBUT
-07/08/2024 09:07:08 - INFO     -         JoueurDao.se_connecter('a', '*****') - DEBUT
-07/08/2024 09:07:08 - INFO     -         JoueurDao.se_connecter('a', '*****') - FIN
-07/08/2024 09:07:08 - INFO     -            └─> Sortie : Joueur(a, 20 ans)
-07/08/2024 09:07:08 - INFO     -     JoueurService.se_connecter('a', '*****') - FIN
-07/08/2024 09:07:08 - INFO     -        └─> Sortie : Joueur(a, 20 ans)
-07/08/2024 09:07:08 - INFO     - MenuJoueurVue
-```
+## :arrow\_forward: Logs
 
+Le logging est initialisé dans le module `src/utils/log_init.py` :
 
+  - Il est appelé au démarrage de l'application (`main.py`) ou du webservice (`app.py`).
+  - Il utilise le fichier `logging_config.yml` pour la configuration.
+      - pour changer le niveau de log :arrow\_right: tag *level*
 
-## :arrow_forward: Continuous integration (CI)
+Un décorateur a été créé dans `src/utils/log_decorator.py`.
 
-The repository contains a `.github/workflow/main.yml' file.
+Lorsqu'il est appliqué à une méthode, il affichera dans les logs :
 
-When you *push* on GitHub, it triggers a pipeline that will perform the following steps:
+  - les paramètres d'entrée
+  - la sortie
 
-- Creating a container from an Ubuntu (Linux) image
-  - In other words, it creates a virtual machine with just a Linux kernel.
-- Install Python
-- Install the required packages
-- Run the unit tests (only the service tests, as it's more complicated to run the dao tests)
-- Analyse the code with *pylint*
-  - If the score is less than 7.5, the step will fail
+Les logs peuvent être consultés dans le dossier `logs`.
 
-You can check how this pipeline is progressing on your repository's GitHub page, *Actions* tab.
+## :arrow\_forward: Continuous integration (CI)
 
-## pour exécuter les tets
+Le dépôt contient un fichier `.github/workflows/ci.yml`.
 
-- Exécuter tous les tests du projet
-pytest
+Lorsque vous *push* sur GitHub, cela déclenche un pipeline qui effectuera les étapes suivantes :
 
-- Exécuter tous les tests avec un affichage détaillé
-pytest -v
+  - Création d'un conteneur à partir d'une image Ubuntu (Linux)
+  - Installation de Python
+  - Installation des packages requis
+  - Exécution des tests unitaires (`pytest`)
+  - Analyse du code avec *pylint*
+      - Si le score est inférieur à 7.5, l'étape échouera
 
-- Exécuter un fichier de test spécifique
-pytest tests/test_qrcode_service.py
+Vous pouvez vérifier la progression de ce pipeline sur la page GitHub de votre dépôt, onglet *Actions*.
 
+## :arrow\_forward: pour exécuter les tests
+
+  - Exécuter tous les tests du projet
+    `pytest`
+
+  - Exécuter tous les tests avec un affichage détaillé
+    `pytest -v`
+
+  - Exécuter un fichier de test spécifique
+    `pytest src/tests/test_service/test_qrcode_service.py`

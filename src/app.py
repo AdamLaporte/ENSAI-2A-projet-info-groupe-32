@@ -104,7 +104,7 @@ async def creer_qrc(data: QRCodeCreateModel, qrcode_service: QRCodeService = Dep
         created = qrcode_service.creer_qrc(
             url=data.url,
             id_proprietaire=data.id_proprietaire,
-            type_=data.type_qrcode, 
+            type_qrcode=data.type_qrcode, 
             couleur=data.couleur,
             logo=data.logo,
         ) 
@@ -196,8 +196,8 @@ async def scan_qrcode(
     """
     try:
         # 1. Trouver le QR Code (via le service/dao)
-        # (J'ai gardé qrcode_service.dao car votre service n'a pas de .trouver_par_id)
-        qr = qrcode_service.dao.trouver_par_id(id_qrcode)
+        # (J'ai gardé qrcode_service.dao car votre service n'a pas de .trouver_qrc_par_id_qrc)
+        qr = qrcode_service.trouver_qrc_par_id(id_qrcode)
         if not qr:
             raise HTTPException(status_code=404, detail="QR code introuvable")
 
@@ -258,7 +258,7 @@ async def scan_qrcode(
 @app.get("/qrcode/{id_qrcode}", tags=["QR Codes"])
 async def details_qrcode(id_qrcode: int, qrcode_service: QRCodeService = Depends(get_qrcode_service)):
     """Retourne les informations détaillées d'un QR code"""
-    qr = qrcode_service.dao.trouver_par_id(id_qrcode) 
+    qr = qrcode_service.trouver_qrc_par_id(id_qrcode)
     if not qr:
         raise HTTPException(status_code=404, detail="QR code introuvable")
     return qr.to_dict() 
@@ -271,7 +271,7 @@ async def details_qrcode(id_qrcode: int, qrcode_service: QRCodeService = Depends
 async def image_qrcode(id_qrcode: int, qrcode_service: QRCodeService = Depends(get_qrcode_service)):
     """Renvoie le fichier image PNG pré-généré du QR code (celui qui encode l'URL de scan)."""
 
-    qr = qrcode_service.dao.trouver_par_id(id_qrcode)
+    qr = qrcode_service.trouver_qrc_par_id(id_qrcode)
     if not qr:
         raise HTTPException(status_code=404, detail="QR code introuvable")
 
@@ -300,7 +300,7 @@ async def stats_qrcode(
     - ...et plus
     """
     # 1. Vérification des droits (logique métier)
-    qr = qrcode_service.dao.trouver_qrc_par_id_qrc(id_qrcode) # (Vous accédez encore au DAO ici, c'est ok)
+    qr = qrcode_service.trouver_qrc_par_id(id_qrcode)
     if not qr:
         raise HTTPException(status_code=404, detail="QR code introuvable")
 

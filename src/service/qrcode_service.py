@@ -42,7 +42,7 @@ class QRCodeService:
             url=url, # URL de destination finale
             id_proprietaire=id_proprietaire,
             date_creation=None,
-            type_qrcode=type_, # bool : True = suivi, False = classique
+            type_qrcode=type_qrcode, # bool : True = suivi, False = classique
             couleur=couleur,
             logo=logo,
         )
@@ -121,6 +121,9 @@ class QRCodeService:
             print(f"Avertissement: n'a pas pu supprimer le fichier image {file_path}: {e}")
 
         return self.dao.supprimer_qrc(id_qrcode) # Le DAO a une méthode 'supprimer_qrc(id)'
+        
+    def trouver_qrc_par_id(self, id_qrcode: int) -> Optional[Qrcode]:
+        return self.dao.trouver_qrc_par_id_qrc(id_qrcode)
 
     def modifier_qrc(self, id_qrcode: int, id_user: str,
                      url: Optional[str] = None, type_qrcode: Optional[bool] = None,
@@ -147,7 +150,7 @@ class QRCodeService:
         regenerate_image = False
 
         nouvelle_url = url if url is not None else qr.url
-        nouveau_type = type_qrcode if type_qrcode is not None else qr.type_qrcode
+        nouveau_type_qrcode = type_qrcode if type_qrcode is not None else qr.type_qrcode
 
         if nouveau_type_qrcode is False:
             # Cas 1: C'est (ou ça devient) un QR Statique.
@@ -212,3 +215,4 @@ class QRCodeService:
             couleur=couleur,
             logo=logo
         )
+

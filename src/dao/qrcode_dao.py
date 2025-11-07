@@ -221,7 +221,7 @@ class QRCodeDao:
                     if not row:
                         raise QRCodeNotFoundError(f"QR code {id_qrcode} introuvable.")
                     owner_id = row["id_proprietaire"] if isinstance(row, dict) else row[0]
-                    if owner_id != id_user:
+                    if owner_id != int(id_user):
                         raise UnauthorizedError("Vous ne pouvez modifier que vos propres QR codes.")
 
                     # Mise à jour

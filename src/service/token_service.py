@@ -11,7 +11,8 @@ import string
 
 class TokenService:
     """Classe contenant les méthodes de service pour la gestion des tokens"""
-    
+
+    @staticmethod
     def generer_jeton(longueur=32):
         """ Génère un jeton d'authentification sécurisé.
     
@@ -42,29 +43,15 @@ class TokenService:
         
         Return
         ------
-
+        Token
+            L'objet Token créé, ou None si la création en base de données a échoué.
         """
         nouveau_token = Token(
             id_user=id_user,
             jeton=TokenService.generer_jeton(),
-            date_expiration = datetime.now() + timedelta(hours=5) #le jeton est valide une heure 
+            date_expiration = datetime.now() + timedelta(hours=5) #le jeton est valide 5 heures 
         )
         return nouveau_token if TokenDao().creer_token(nouveau_token) else None
-
-        """
-        Vérifie si un token existe dans la base de données via le DAO.
-        
-        Attributs
-        ---------
-        jeton : str
-            Le jeton à vérifier
-        
-        Returns
-        -------
-        bool
-            True si le token existe, False sinon
-        """
-        return TokenDao().existe_token(jeton)
 
 
     @log
