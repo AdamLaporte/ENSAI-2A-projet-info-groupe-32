@@ -45,13 +45,13 @@ def test_creer_qrc_classique_ok():
     - L’image encode directement url
     """
     fake_dao = MagicMock()
-    q_created = Qrcode(id_qrcode=7, url="https://ex.com", id_proprietaire="3")
+    q_created = Qrcode(id_qrcode=7, url="https://ex.com", id_proprietaire=3)
     fake_dao.creer_qrc.return_value = q_created
 
     with patch("service.qrcode_service.generate_and_save_qr_png", return_value="/tmp/x.png"):
         with patch("service.qrcode_service.filepath_to_public_url", return_value="http://x/x.png"):
             service = QRCodeService(fake_dao)
-            res = service.creer_qrc("https://ex.com", "3", type_qrcode=False)
+            res = service.creer_qrc("https://ex.com", 3, type_qrcode=False)
 
     assert isinstance(res, Qrcode)
     assert res._scan_url is None
@@ -161,12 +161,16 @@ def test_modifier_qrc_success():
 
 
 def test_modifier_qrc_not_found():
+    """
+    Si le QR n'existe pas → QRCodeNotFoundError.
+    """
+
     fake_dao = MagicMock()
     fake_dao.trouver_qrc_par_id_qrc.return_value = None
 
     service = QRCodeService(fake_dao)
     with pytest.raises(QRCodeNotFoundError):
-        service.modifier_qrc(10, "3")
+        service.modifier_qrc(10, 3)
 
 
 def test_modifier_qrc_unauthorized():
