@@ -174,6 +174,9 @@ def test_modifier_qrc_not_found():
 
 
 def test_modifier_qrc_unauthorized():
+    """
+    Si l'utilisateur n'est pas propriétaire → UnauthorizedError.
+    """
     fake_dao = MagicMock()
     fake_dao.trouver_qrc_par_id_qrc.return_value = Qrcode(10, "https://ex.com", 3)
 
