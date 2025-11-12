@@ -24,3 +24,6 @@ PyYAML
 
 # Tests
 pytest
+
+# Token
+python-multipart

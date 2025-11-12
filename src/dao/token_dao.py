@@ -55,8 +55,7 @@ class TokenDao(metaclass=Singleton):
                     cursor.execute(
                         """
                         INSERT INTO token(id_user, jeton, date_expiration)
-                        VALUES (%(id_user)s, %(jeton)s, %(date_expiration)s)
-                        RETURNING id_token;
+                        VALUES (%(id_user)s, %(jeton)s, %(date_expiration)s);
                         """,
                         {
                             "id_user": token.id_user,
@@ -64,14 +63,11 @@ class TokenDao(metaclass=Singleton):
                             "date_expiration": token.date_expiration,
                         },
                     )
-                    res = cursor.fetchone()
-                    if res:
-                        created = True
-                        id_token = res[0]  # id_token renvoyé par la base de données
-                        logging.info(f"Token créé avec succès, ID du token : {id_token}")
+                    created = cursor.rowcount == 1                    
+                    if created:
+                        logging.info(f"Token créé avec succès pour user {token.id_user}")
                     else:
-                        created = False
-                        logging.error("Échec de la création du token : aucune réponse retournée.")
+                        logging.error("Échec de la création du token : aucune ligne insérée.")
         except Exception as e:
             created = False
             logging.error(f"Erreur lors de la création du token : {e}")
@@ -182,24 +178,17 @@ class TokenDao(metaclass=Singleton):
             return False
 
     @log
-    def trouver_id_user_par_token(self, jeton: str) -> str | None:
-        """Trouver l'id_user associé à un jeton
-
-        Attribut
-        ----------
-        jeton : str
-            Le jeton à rechercher
-
-        Returns
-        -------
-        id_user : str
-            L'identifiant de l'utilisateur associé au jeton, ou None s'il n'existe pas
+    def trouver_token_par_jeton(self, jeton: str) -> Token | None:
+        """Trouver l'objet Token complet associé à un jeton
+        ...
         """
         try:
             with DBConnection().connection as connection:
                 with connection.cursor() as cursor:
+                    # On sélectionne toutes les colonnes nécessaires pour l'objet Token
                     cursor.execute(
-                        "SELECT id_user FROM token WHERE jeton = %(jeton)s;",
+                        "SELECT id_user, jeton, date_expiration "
+                        "FROM token WHERE jeton = %(jeton)s;",
                         {"jeton": jeton},
                     )
                     res = cursor.fetchone()
@@ -208,9 +197,13 @@ class TokenDao(metaclass=Singleton):
             return None
 
         if res:
-            return res["id_user"]
+            # On construit l'objet Token complet
+            return Token(
+                id_user=res["id_user"],
+                jeton=res["jeton"],
+                date_expiration=res["date_expiration"],
+            )
         return None
-
     @log
     def existe_token(self, jeton: str) -> bool:
         """ Vérifie si un token existe dans la base de données

@@ -21,8 +21,10 @@ CREATE TABLE utilisateur (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_utilisateur_nom_user ON utilisateur(nom_user);
 
 CREATE TABLE token (
+  id_token SERIAL PRIMARY KEY, -- AJOUT DE LA CLÉ PRIMAIRE
   id_user INT NOT NULL,
   jeton TEXT NOT NULL,
+  date_expiration TIMESTAMPTZ,
   FOREIGN KEY (id_user) REFERENCES utilisateur(id_user) ON DELETE CASCADE
 );
 CREATE UNIQUE INDEX IF NOT EXISTS uq_token_jeton ON token(jeton);

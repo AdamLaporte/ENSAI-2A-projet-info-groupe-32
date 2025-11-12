@@ -3,8 +3,7 @@ from dao.token_dao import TokenDao
 from business_object.token import Token
 
 import logging 
-from datetime import datetime, timedelta
-
+from datetime import datetime, timedelta, timezone
 import secrets
 import string
 
@@ -49,7 +48,7 @@ class TokenService:
         nouveau_token = Token(
             id_user=id_user,
             jeton=TokenService.generer_jeton(),
-            date_expiration = datetime.now() + timedelta(hours=5) #le jeton est valide 5 heures 
+            date_expiration = datetime.now(timezone.utc) + timedelta(hours=5) 
         )
         return nouveau_token if TokenDao().creer_token(nouveau_token) else None
 
@@ -109,8 +108,7 @@ class TokenService:
             if token.date_expiration is None:
                 return False
             
-            now = datetime.now() 
-        
+            now = datetime.now(timezone.utc) 
             return token.date_expiration >= now
         except Exception as e:
             logging.info(f"Erreur lors de la vérification du token : {e}")

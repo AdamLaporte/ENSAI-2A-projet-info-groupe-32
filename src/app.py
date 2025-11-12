@@ -1,22 +1,16 @@
 import os
 import logging
 from datetime import datetime
-# AJOUTÉ : Depends pour l'injection de dépendances
-from fastapi import FastAPI, HTTPException, Request, Depends
-# Ajout de FileResponse pour renvoyer des fichiers
+# AJOUTÉ : Imports pour la sécurité, les services et le formulaire de login
+from fastapi import FastAPI, HTTPException, Request, Depends, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.responses import RedirectResponse, JSONResponse, FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from dotenv import load_dotenv
-import requests # <-- AJOUTÉ POUR L'API DE GÉOLOCALISATION
+import requests 
 
-
-# ------------------------------------
-# si app bloqué par un port :
-# pkill -f "uvicorn" ou pkill -f "python.*app.py" depuis le terminal de l’environnement.
-# ------------------------------------
-
-load_dotenv()  # charge le .env dans os.environ
+load_dotenv()  
 
 from service.qrcode_service import QRCodeService
 from dao.qrcode_dao import QRCodeDao
@@ -26,8 +20,16 @@ from service.log_scan_service import LogScanService
 from dao.statistique_dao import StatistiqueDao 
 from dao.log_scan_dao import LogScanDao   
 from service.qrcode_service import QRCodeService, QRCodeNotFoundError, UnauthorizedError
+
+# --- AJOUT : Imports des services et DAO pour l'authentification ---
+from service.utilisateur_service import UtilisateurService
+from service.token_service import TokenService
+from dao.token_dao import TokenDao
+from dao.utilisateur_dao import UtilisateurDao
+from business_object.token import Token # Importé pour la vérification
+
 # Logging de base
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime=s) - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # --- Initialisation de l'application ---
@@ -35,6 +37,10 @@ root_path = os.getenv("ROOT_PATH", "")
 app = FastAPI()
 
 QR_OUTPUT_DIR = os.getenv("QRCODE_OUTPUT_DIR", "static/qrcodes")
+
+# -------------------------------------------------------------
+# 🔹 INJECTION DE DÉPENDANCES (SERVICES)
+# -------------------------------------------------------------
 
 def get_qrcode_service():
     return QRCodeService(QRCodeDao())
@@ -45,33 +51,30 @@ def get_statistique_service():
 def get_log_scan_service():
     return LogScanService(LogScanDao())
 
+# --- AJOUT : Dépendances pour les services d'authentification ---
+def get_utilisateur_service():
+    return UtilisateurService()
+
+def get_token_service():
+    return TokenService()
+
+def get_token_dao():
+    return TokenDao()
+# --- Fin Ajout ---
+
+
 # --- NOUVELLE FONCTION : Helper de Géolocalisation ---
 def _get_geolocation_from_ip(ip: str) -> (Optional[str], Optional[str], Optional[str]):
-    """
-    Appelle une API de géo-IP externe pour obtenir le pays, la région et la ville.
-    Retourne (None, None, None) en cas d'échec ou d'IP privée.
-    """
-    # Ne pas appeler l'API pour des IP privées/locales
-    #if not ip or ip == "127.0.0.1" or ip.startswith("192.168.") or ip.startswith("10."):
-    #    return (None, None, None)
-        
+    # ... (votre fonction de géolocalisation reste inchangée) ...
     try:
-        # Utilise un timeout court pour ne pas ralentir la redirection
         response = requests.get(f"http://ip-api.com/json/{ip}?fields=status,country,regionName,city", timeout=0.5)
-        response.raise_for_status() # Lève une erreur pour les statuts 4xx/5xx
-        
+        response.raise_for_status() 
         data = response.json()
-        
         if data.get("status") == "success":
-            return (
-                data.get("country"),
-                data.get("regionName"),
-                data.get("city")
-            )
+            return (data.get("country"), data.get("regionName"), data.get("city"))
         else:
             logger.warning(f"Échec de la géolocalisation pour l'IP {ip}: {data.get('message')}")
             return (None, None, None)
-            
     except requests.exceptions.RequestException as e:
         logger.error(f"Erreur lors de l'appel à l'API de géolocalisation pour {ip}: {e}")
         return (None, None, None)
@@ -79,9 +82,14 @@ def _get_geolocation_from_ip(ip: str) -> (Optional[str], Optional[str], Optional
 
 
 # --- Modèles d’entrée pour l’API ---
+
+class UserCreateModel(BaseModel):
+    nom_user: str = Field(..., min_length=1)
+    mdp: str = Field(..., min_length=5) # Correspond à votre validateur de vue
+
 class QRCodeCreateModel(BaseModel):
     url: str
-    id_proprietaire: str
+    id_proprietaire: str # Gardé pour la création, mais on pourrait le forcer à être l'utilisateur logué
     type_qrcode: Optional[bool] = True
     couleur: Optional[str] = "black"
     logo: Optional[str] = None
@@ -91,16 +99,132 @@ class QRCodeUpdateModel(BaseModel):
     type_qrcode: Optional[bool] = None
     couleur: Optional[str] = None
     logo: Optional[str] = None
+
 # -------------------------------------------------------------
-# 🔹 ROUTES QR CODE CRUD
+# 🔹 NOUVEAU : Configuration de la sécurité (OAuth2)
 # -------------------------------------------------------------
-@app.post("/qrcode/", tags=["QR Codes"])
-async def creer_qrc(data: QRCodeCreateModel, qrcode_service: QRCodeService = Depends(get_qrcode_service)):
+
+# Définit l'URL où les clients doivent POSTer pour obtenir un token
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+# Définit une exception standard pour l'authentification
+credentials_exception = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Impossible de valider les identifiants",
+    headers={"WWW-Authenticate": "Bearer"},
+)
+
+async def verifier_token_valide(
+    token_str: str = Depends(oauth2_scheme), 
+    token_dao: TokenDao = Depends(get_token_dao),
+    token_service: TokenService = Depends(get_token_service)
+) -> int:
     """
-    Créer un QR code, l'enregistrer et renvoyer ses détails 
-    incluant l'URL de l'image et l'URL de scan.
+    Dépendance FastAPI pour valider un token.
+    Appelée automatiquement pour chaque route protégée.
     """
     try:
+        # 1. Récupérer l'objet Token complet basé sur la chaîne du token
+        token_obj = token_dao.trouver_token_par_jeton(token_str)
+        
+        # 2. L'objet token est-il valide (existant ET non expiré) ?
+        if not token_obj or not token_service.est_valide_token(token_obj): 
+            logger.warning(f"Token expiré ou invalide reçu : {token_str[:10]}...")
+            raise credentials_exception
+            
+        return int(token_obj.id_user) # Succès, retourne l'ID utilisateur
+        
+    except Exception as e:
+        logger.error(f"Erreur validation token : {e}")
+        raise credentials_exception
+# -------------------------------------------------------------
+# 🔹 NOUVEAU : Route de Login
+# -------------------------------------------------------------
+@app.post("/login", tags=["Authentification"])
+async def login_pour_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    user_service: UtilisateurService = Depends(get_utilisateur_service),
+    token_service: TokenService = Depends(get_token_service)
+):
+    """
+    Prend un nom_user (username) et mdp (password)
+    et retourne un token Bearer s'ils sont valides.
+    """
+    # 1. Vérifier l'utilisateur
+    user = user_service.se_connecter(form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Nom d'utilisateur ou mot de passe incorrect",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # 2. Créer un token
+    # (On pourrait d'abord chercher un token valide existant, 
+    # mais en créer un nouveau à chaque login est aussi une stratégie)
+    token = token_service.creer_token(user.id_user)
+    if not token:
+        raise HTTPException(status_code=500, detail="Impossible de créer le token")
+
+    return {"access_token": token.jeton, "token_type": "bearer"}
+
+# -------------------------------------------------------------
+# 🔹 NOUVEAU : Route d'Inscription (Publique)
+# -------------------------------------------------------------
+@app.post("/register", tags=["Authentification"], status_code=status.HTTP_201_CREATED)
+async def register_user(
+    data: UserCreateModel,
+    user_service: UtilisateurService = Depends(get_utilisateur_service)
+):
+    """
+    Crée un nouveau compte utilisateur.
+    Route publique.
+    """
+    try:
+        # 1. Vérifier si le nom_user est déjà pris
+        if user_service.nom_user_deja_utilise(data.nom_user):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Le nom d'utilisateur '{data.nom_user}' est déjà utilisé."
+            )
+            
+        # 2. Créer l'utilisateur
+        user = user_service.creer_user(data.nom_user, data.mdp)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="La création du compte a échoué pour une raison inconnue."
+            )
+        
+        # 3. Renvoyer l'utilisateur créé (sans le mot de passe)
+        return {
+            "id_user": user.id_user,
+            "nom_user": user.nom_user,
+            "message": "Compte créé avec succès."
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Erreur lors de l'inscription de {data.nom_user}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# -------------------------------------------------------------
+# 🔹 ROUTES QR CODE CRUD (MAINTENANT PROTÉGÉES)
+# -------------------------------------------------------------
+@app.post("/qrcode/", tags=["QR Codes"])
+async def creer_qrc(
+    data: QRCodeCreateModel, 
+    qrcode_service: QRCodeService = Depends(get_qrcode_service),
+    current_user_id: int = Depends(verifier_token_valide) # <- PROTÉGÉ
+):
+    """
+    Créer un QR code (authentification requise).
+    """
+    try:
+        # Force la création au nom de l'utilisateur authentifié
+        data.id_proprietaire = str(current_user_id)
+
         created = qrcode_service.creer_qrc(
             url=data.url,
             id_proprietaire=data.id_proprietaire,
@@ -121,44 +245,56 @@ async def creer_qrc(data: QRCodeCreateModel, qrcode_service: QRCodeService = Dep
         logger.exception("Erreur création QR code : %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/qrcode/utilisateur/{id_user}", tags=["QR Codes"])
-async def qrcodes_par_utilisateur(id_user: str, qrcode_service: QRCodeService = Depends(get_qrcode_service)):
-    """Lister tous les QR codes d’un utilisateur"""
+@app.get("/qrcode/utilisateur/me", tags=["QR Codes"])
+async def qrcodes_par_utilisateur_connecte(
+    current_user_id: int = Depends(verifier_token_valide), # <- PROTÉGÉ
+    qrcode_service: QRCodeService = Depends(get_qrcode_service)
+):
+    """Lister tous les QR codes de l'utilisateur authentifié."""
     try:
-        qrs = qrcode_service.trouver_qrc_par_id_user(id_user)
+        qrs = qrcode_service.trouver_qrc_par_id_user(str(current_user_id))
         return [q.to_dict() for q in qrs]
-    except HTTPException:
-        raise
     except Exception as e:
-        logger.exception(f"Erreur lors du listing des QR codes pour user {id_user} : {e}")
+        logger.exception(f"Erreur lors du listing des QR codes pour user {current_user_id} : {e}")
         return [] 
 
 @app.delete("/qrcode/{id_qrcode}", tags=["QR Codes"])
-async def supprimer_qrcode(id_qrcode: int, id_user: str, qrcode_service: QRCodeService = Depends(get_qrcode_service)):
-    """Supprimer un QR code (seulement par le propriétaire)"""
+async def supprimer_qrcode(
+    id_qrcode: int, 
+    current_user_id: int = Depends(verifier_token_valide), # <- PROTÉGÉ
+    qrcode_service: QRCodeService = Depends(get_qrcode_service)
+):
+    """Supprimer un QR code (seulement par le propriétaire authentifié)"""
     try:
-        ok = qrcode_service.supprimer_qrc(id_qrcode, id_user)
+        # Le service attend un str pour id_user
+        ok = qrcode_service.supprimer_qrc(id_qrcode, str(current_user_id))
         if not ok:
-            raise HTTPException(status_code=404, detail="QR code introuvable ou non autorisé")
+            # Le service lève déjà UnauthorizedError ou QRCodeNotFoundError
+            raise HTTPException(status_code=500, detail="Erreur lors de la suppression")
         return {"success": True}
+    except (QRCodeNotFoundError, UnauthorizedError) as e:
+        # Gérer les erreurs métier spécifiques levées par le service
+        status_code = 404 if isinstance(e, QRCodeNotFoundError) else 403
+        raise HTTPException(status_code=status_code, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
         logger.exception("Erreur suppression QR code : %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.put("/qrcode/{id_qrcode}", tags=["QR Codes"])
 async def modifier_qrcode(
     id_qrcode: int, 
     data: QRCodeUpdateModel,
-    id_user: str, # Reçu en paramètre de requête
+    current_user_id: int = Depends(verifier_token_valide), # <- PROTÉGÉ
     qrcode_service: QRCodeService = Depends(get_qrcode_service)
 ):
-    """Modifier un QR code (seulement par le propriétaire)."""
+    """Modifier un QR code (seulement par le propriétaire authentifié)."""
     try:
         updated = qrcode_service.modifier_qrc(
             id_qrcode=id_qrcode,
-            id_user=id_user,
+            id_user=str(current_user_id), # Le service attend un str
             url=data.url,
             type_qrcode=data.type_qrcode,
             couleur=data.couleur,
@@ -178,7 +314,7 @@ async def modifier_qrcode(
         raise HTTPException(status_code=500, detail=str(e))
 
 # -------------------------------------------------------------
-# 🔹 ROUTE SCAN (Refactorisée)
+# 🔹 ROUTE SCAN (Publique, pas de token requis)
 # -------------------------------------------------------------
 @app.get("/scan/{id_qrcode}", include_in_schema=True, tags=["Scan"])
 async def scan_qrcode(
@@ -189,44 +325,35 @@ async def scan_qrcode(
     log_service: LogScanService = Depends(get_log_scan_service)
 ):
     """
-    Lorsqu'un utilisateur scanne le QR code :
-    - [GÉO] Tente de géolocaliser l'IP
-    - [LOG] on enregistre une statistique (date, +1) si le QR est 'suivi'
-    - [REDIRECTION] puis on redirige vers l'URL réelle
+    Route publique pour le scan.
+    (fonctionnement inchangé)
     """
     try:
-        # 1. Trouver le QR Code (via le service/dao)
-        # (J'ai gardé qrcode_service.dao car votre service n'a pas de .trouver_qrc_par_id_qrc)
         qr = qrcode_service.trouver_qrc_par_id(id_qrcode)
         if not qr:
             raise HTTPException(status_code=404, detail="QR code introuvable")
 
-        # 2. Rediriger si le QR n'est pas suivi
-        if qr.type_qrcode is False: # (Note: j'ai corrigé 'qr.type' en 'qr.type_qrcode')
+        if qr.type_qrcode is False: 
             logger.info(f"Scan NON enregistré (QR non-suivi) pour QRCode {id_qrcode}")
             return RedirectResponse(url=qr.url, status_code=307)
 
-        # --- 3. Collecter les données de la requête ---
+        # --- Collecter les données ---
         user_agent = request.headers.get("user-agent", "inconnu")
         client_host = request.headers.get("x-forwarded-for")
         if client_host:
             client_host = client_host.split(',')[0].strip()
         else:
             client_host = request.client.host if request.client else "inconnu"
-        
         date_vue = datetime.utcnow()
         referer = request.headers.get("referer") 
         language = request.headers.get("accept-language")
 
-        # --- 4. Obtenir la géolocalisation ---
+        # --- Géolocalisation ---
         geo_country, geo_region, geo_city = _get_geolocation_from_ip(client_host)
         
-        # --- 5. DÉLÉGUER l'enregistrement (au lieu du SQL ici) ---
-        
-        # 5.1. Incrémenter le compteur journalier via le StatistiqueService
+        # --- Enregistrement ---
         stat_service.enregistrer_vue(id_qrcode, date_vue.date())
         
-        # 5.2. Enregistrer le log détaillé via le LogScanService
         log_service.enregistrer_log(
             id_qrcode=id_qrcode,
             client_host=client_host,
@@ -238,8 +365,6 @@ async def scan_qrcode(
             geo_city=geo_city
         )
         
-        # --- Fin de la logique d'enregistrement ---
-
         logger.info(f"Scan ENREGISTRÉ (QR suivi) pour QRCode {id_qrcode} depuis {client_host} ({geo_city}, {geo_country})")
 
         # 6. Rediriger l'utilisateur
@@ -253,61 +378,62 @@ async def scan_qrcode(
 
 
 # -------------------------------------------------------------
-# 🔹 DÉTAILS QR PAR ID
+# 🔹 DÉTAILS QR PAR ID (Publique ou Protégée ?)
 # -------------------------------------------------------------
 @app.get("/qrcode/{id_qrcode}", tags=["QR Codes"])
 async def details_qrcode(id_qrcode: int, qrcode_service: QRCodeService = Depends(get_qrcode_service)):
-    """Retourne les informations détaillées d'un QR code"""
+    """Retourne les informations détaillées d'un QR code (Publique)"""
+    # Note: Si vous voulez la protéger, ajoutez : current_user_id: int = Depends(verifier_token_valide)
     qr = qrcode_service.trouver_qrc_par_id(id_qrcode)
     if not qr:
         raise HTTPException(status_code=404, detail="QR code introuvable")
     return qr.to_dict() 
 
-
 # -------------------------------------------------------------
-# 🔹 IMAGE PNG DU QR CODE (MODIFIÉ)
+# 🔹 IMAGE PNG DU QR CODE (Publique)
 # -------------------------------------------------------------
 @app.get("/qrcode/{id_qrcode}/image", tags=["QR Codes"])
 async def image_qrcode(id_qrcode: int, qrcode_service: QRCodeService = Depends(get_qrcode_service)):
-    """Renvoie le fichier image PNG pré-généré du QR code (celui qui encode l'URL de scan)."""
-
+    """Renvoie le fichier image PNG pré-généré du QR code (Publique)"""
+    # (Inchangé)
     qr = qrcode_service.trouver_qrc_par_id(id_qrcode)
     if not qr:
         raise HTTPException(status_code=404, detail="QR code introuvable")
-
     file_name = f"qrcode_{id_qrcode}.png"
     file_path = os.path.join(QR_OUTPUT_DIR, file_name)
-
     if not os.path.exists(file_path):
         logger.error(f"Image non trouvée sur le disque pour QR {id_qrcode} à {file_path}")
-        raise HTTPException(status_code=404, detail="Fichier image non trouvé. (Le QR existe en base mais le fichier PNG est manquant)")
-
+        raise HTTPException(status_code=404, detail="Fichier image non trouvé.")
     return FileResponse(file_path, media_type="image/png")
 
 # -------------------------------------------------------------
-# 🔹 STATISTIQUES D'UN QR CODE (REFACTORISÉ)
+# 🔹 STATISTIQUES D'UN QR CODE (PROTÉGÉ)
 # -------------------------------------------------------------
 @app.get("/qrcode/{id_qrcode}/stats", tags=["Stats"])
 async def stats_qrcode(
     id_qrcode: int, 
+    current_user_id: int = Depends(verifier_token_valide), # <- PROTÉGÉ
     detail: bool = True, 
     qrcode_service: QRCodeService = Depends(get_qrcode_service),
-    stat_service: StatistiqueService = Depends(get_statistique_service) # Ajout du service
+    stat_service: StatistiqueService = Depends(get_statistique_service) 
 ):
     """
-    Retourne les statistiques d'un QR:
-    - total_vues: nombre total de vues
-    - ...et plus
+    Retourne les statistiques d'un QR (authentification requise).
+    Vérifie également que l'utilisateur est propriétaire.
     """
-    # 1. Vérification des droits (logique métier)
+    # 1. Vérification de l'existence
     qr = qrcode_service.trouver_qrc_par_id(id_qrcode)
     if not qr:
         raise HTTPException(status_code=404, detail="QR code introuvable")
 
+    # 2. Vérification du propriétaire
+    if str(qr.id_proprietaire) != str(current_user_id):
+        raise HTTPException(status_code=403, detail="Accès non autorisé aux statistiques de ce QR code")
+
     if qr.type_qrcode is False:
         raise HTTPException(status_code=404, detail="Statistiques non disponibles pour un QR code non-suivi.")
 
-    # 2. Appel du service (qui gère TOUTE la logique BDD)
+    # 3. Appel du service (qui gère TOUTE la logique BDD)
     try:
         result = stat_service.get_statistiques_qr_code(id_qrcode, detail)
         return result

@@ -19,10 +19,18 @@ class MenuUtilisateurVue(VueAbstraite):
         sess = Session()
         return getattr(sess, "user", None) or getattr(sess, "joueur", None) or getattr(sess, "utilisateur", None)
 
+    # --- AJOUT : Helper pour récupérer le token et les headers ---
+    def _get_auth_headers(self):
+        """Récupère le token de la session et le formate pour les requêtes API."""
+        token = getattr(Session(), "access_token", None)
+        if not token:
+            # Si le token est manquant, lève une exception que les menus vont attraper
+            raise ValueError("Token API non trouvé dans la session. Veuillez vous reconnecter.")
+        return {"Authorization": f"Bearer {token}"}
+    # --- FIN AJOUT ---
+
     def _build_scan_url(self, qr_id: int) -> str:
-        """
-        Construit l'URL de scan à afficher dans le terminal.
-        """
+        # ... (inchangé) ...
         scan_base = os.getenv("SCAN_BASE_URL")
         if not scan_base:
             print("AVERTISSEMENT: SCAN_BASE_URL n'est pas défini dans .env")
@@ -112,21 +120,18 @@ class MenuUtilisateurVue(VueAbstraite):
             case "Se déconnecter":
                 Session().deconnexion()
                 from view.accueil.accueil_vue import AccueilVue
-                return AccueilVue()
+                return AccueilVue("Vous avez été déconnecté.")
 
             case "Modifier un QR code (via API)":
                 try:
-                    user = self._get_current_user()
-                    if user is None:
-                        return MenuUtilisateurVue("Non connecté.")
-                    id_user = getattr(user, "id_user", None)
-                    if not id_user:
-                        return MenuUtilisateurVue("Impossible de déterminer l'id utilisateur.")
+                    # AJOUT : Récupération des headers d'authentification
+                    auth_headers = self._get_auth_headers()
 
-                    # --- 1. Récupérer la liste des QR codes
-                    list_endpoint = f"{API_BASE_URL.rstrip('/')}/qrcode/utilisateur/{str(id_user)}"
+                    # --- 1. Récupérer la liste des QR codes ---
+                    # MODIFIÉ : Utilisation de la nouvelle route "/me" et des headers
+                    list_endpoint = f"{API_BASE_URL.rstrip('/')}/qrcode/utilisateur/me"
                     print(f"Appel de l'API GET {list_endpoint} pour lister vos QRs...")
-                    list_response = requests.get(list_endpoint, timeout=10)
+                    list_response = requests.get(list_endpoint, headers=auth_headers, timeout=10)
                     list_response.raise_for_status()
                     mes_qr_data = list_response.json()
                     
@@ -171,10 +176,11 @@ class MenuUtilisateurVue(VueAbstraite):
 
                     print(f"Appel de l'API PUT {update_endpoint}...")
                     
+                    # MODIFIÉ : Utilisation des headers, suppression de 'params'
                     response = requests.put(
                         update_endpoint,
                         json=payload,
-                        params={"id_user": str(id_user)}, # Paramètre de requête pour l'auth
+                        headers=auth_headers, 
                         timeout=10
                     )
                     
@@ -182,29 +188,28 @@ class MenuUtilisateurVue(VueAbstraite):
                     
                     return MenuUtilisateurVue(f"Le QR code #{id_qr} a été mis à jour.")
                 
-                except requests.exceptions.HTTPError as http_err:
-                    # ... (copiez le bloc 'except' de la fonction de suppression) ...
-                    try:
-                        detail = http_err.response.json().get('detail', http_err)
-                    except json.JSONDecodeError:
-                        detail = http_err.response.text
-                    return MenuUtilisateurVue(f"Erreur API: {http_err.response.status_code} - {detail}")
+                except (requests.exceptions.HTTPError, ValueError) as err:
+                    # MODIFIÉ : Gestion d'erreur améliorée pour attraper aussi le token manquant (ValueError)
+                    detail = str(err)
+                    if isinstance(err, requests.exceptions.HTTPError):
+                        try:
+                            detail = err.response.json().get('detail', err.response.text)
+                        except json.JSONDecodeError:
+                            detail = err.response.text
+                    return MenuUtilisateurVue(f"Erreur: {detail}")
                 except Exception as e:
                     return MenuUtilisateurVue(f"Erreur lors de la modification: {e}")
 
             case "Supprimer un QR code (via API)":
                 try:
-                    user = self._get_current_user()
-                    if user is None:
-                        return MenuUtilisateurVue("Non connecté.")
-                    id_user = getattr(user, "id_user", None)
-                    if not id_user:
-                        return MenuUtilisateurVue("Impossible de déterminer l'id utilisateur.")
+                    # AJOUT : Récupération des headers d'authentification
+                    auth_headers = self._get_auth_headers()
 
                     # --- 1. Récupérer la liste de TOUS les QR codes de l'utilisateur ---
-                    list_endpoint = f"{API_BASE_URL.rstrip('/')}/qrcode/utilisateur/{str(id_user)}"
+                    # MODIFIÉ : Utilisation de la nouvelle route "/me" et des headers
+                    list_endpoint = f"{API_BASE_URL.rstrip('/')}/qrcode/utilisateur/me"
                     print(f"Appel de l'API GET {list_endpoint} pour lister vos QRs...")
-                    list_response = requests.get(list_endpoint, timeout=10)
+                    list_response = requests.get(list_endpoint, headers=auth_headers, timeout=10)
                     list_response.raise_for_status()
                     
                     mes_qr_data = list_response.json()
@@ -248,11 +253,10 @@ class MenuUtilisateurVue(VueAbstraite):
                     delete_endpoint = f"{API_BASE_URL.rstrip('/')}/qrcode/{id_qr}"
                     print(f"Appel de l'API DELETE {delete_endpoint}...")
 
-                    # L'API attend 'id_user' en paramètre de requête (query param)
-                    # voir la définition de la route dans app (1).py
+                    # MODIFIÉ : Utilisation des headers, suppression de 'params'
                     response = requests.delete(
                         delete_endpoint,
-                        params={"id_user": str(id_user)}, 
+                        headers=auth_headers, 
                         timeout=10
                     )
                     
@@ -260,14 +264,15 @@ class MenuUtilisateurVue(VueAbstraite):
                     
                     return MenuUtilisateurVue(f"Le QR code #{id_qr} a été supprimé avec succès.")
                 
-                except requests.exceptions.HTTPError as http_err:
-                    try:
-                        detail = http_err.response.json().get('detail', http_err)
-                    except json.JSONDecodeError:
-                        detail = http_err.response.text
-                    if http_err.response.status_code == 404:
-                         return MenuUtilisateurVue(f"Info: {detail}")
-                    return MenuUtilisateurVue(f"Erreur API: {http_err.response.status_code} - {detail}")
+                except (requests.exceptions.HTTPError, ValueError) as err:
+                    # MODIFIÉ : Gestion d'erreur améliorée
+                    detail = str(err)
+                    if isinstance(err, requests.exceptions.HTTPError):
+                        try:
+                            detail = err.response.json().get('detail', err.response.text)
+                        except json.JSONDecodeError:
+                            detail = err.response.text
+                    return MenuUtilisateurVue(f"Erreur: {detail}")
                 except requests.exceptions.RequestException as req_err:
                     return MenuUtilisateurVue(f"Erreur de connexion à l'API: {req_err}")
                 except Exception as e:
@@ -279,20 +284,19 @@ class MenuUtilisateurVue(VueAbstraite):
 
             case "Lister mes QR codes (via API)":
                 try:
+                    # AJOUT : Récupération des headers d'authentification
+                    auth_headers = self._get_auth_headers()
                     user = self._get_current_user()
-                    if user is None:
-                        return MenuUtilisateurVue("Non connecté.")
+                    nom_user = getattr(user, 'nom_user', 'Utilisateur')
                     
-                    id_user = getattr(user, "id_user", None)
-                    nom_user = getattr(user, 'nom_user', id_user)
-                    
-                    if not id_user:
+                    if not user:
                         return MenuUtilisateurVue("Impossible de déterminer l'id utilisateur.")
 
-                    api_endpoint = f"{API_BASE_URL.rstrip('/')}/qrcode/utilisateur/{str(id_user)}"
+                    # MODIFIÉ : Utilisation de la nouvelle route "/me" et des headers
+                    api_endpoint = f"{API_BASE_URL.rstrip('/')}/qrcode/utilisateur/me"
                     print(f"Appel de l'API GET {api_endpoint}...")
 
-                    response = requests.get(api_endpoint, timeout=10)
+                    response = requests.get(api_endpoint, headers=auth_headers, timeout=10)
                     response.raise_for_status() 
 
                     qrs_data = response.json()
@@ -360,12 +364,15 @@ class MenuUtilisateurVue(VueAbstraite):
                     
                     return MenuUtilisateurVue("\n".join(lignes))
 
-                except requests.exceptions.HTTPError as http_err:
-                    try:
-                        detail = http_err.response.json().get('detail', http_err)
-                    except json.JSONDecodeError:
-                        detail = http_err.response.text
-                    return MenuUtilisateurVue(f"Erreur API: {http_err.response.status_code} - {detail}")
+                except (requests.exceptions.HTTPError, ValueError) as err:
+                    # MODIFIÉ : Gestion d'erreur améliorée
+                    detail = str(err)
+                    if isinstance(err, requests.exceptions.HTTPError):
+                        try:
+                            detail = err.response.json().get('detail', err.response.text)
+                        except json.JSONDecodeError:
+                            detail = err.response.text
+                    return MenuUtilisateurVue(f"Erreur: {detail}")
                 except requests.exceptions.RequestException as req_err:
                     return MenuUtilisateurVue(f"Erreur de connexion à l'API: {req_err}")
                 except Exception as e:
@@ -374,16 +381,16 @@ class MenuUtilisateurVue(VueAbstraite):
 
             case "Voir statistiques d'un de MES QR (via API)":
                 try:
+                    # AJOUT : Récupération des headers d'authentification
+                    auth_headers = self._get_auth_headers()
                     user = self._get_current_user()
-                    if user is None:
-                        return MenuUtilisateurVue("Non connecté.")
-                    id_user = getattr(user, "id_user", None)
-                    if not id_user:
+                    if not user:
                         return MenuUtilisateurVue("Impossible de déterminer l'id utilisateur.")
 
-                    list_endpoint = f"{API_BASE_URL.rstrip('/')}/qrcode/utilisateur/{str(id_user)}"
+                    # MODIFIÉ : Utilisation de la nouvelle route "/me" et des headers
+                    list_endpoint = f"{API_BASE_URL.rstrip('/')}/qrcode/utilisateur/me"
                     print(f"Appel de l'API GET {list_endpoint} pour lister vos QRs...")
-                    list_response = requests.get(list_endpoint, timeout=10)
+                    list_response = requests.get(list_endpoint, headers=auth_headers, timeout=10)
                     list_response.raise_for_status()
                     
                     mes_qr_data = list_response.json()
@@ -405,7 +412,8 @@ class MenuUtilisateurVue(VueAbstraite):
 
                     stats_endpoint = f"{API_BASE_URL.rstrip('/')}/qrcode/{id_qr}/stats"
                     print(f"Appel de l'API GET {stats_endpoint}...")
-                    stats_response = requests.get(stats_endpoint, timeout=10)
+                    # MODIFIÉ : Utilisation des headers
+                    stats_response = requests.get(stats_endpoint, headers=auth_headers, timeout=10)
                     stats_response.raise_for_status()
                     
                     stats_data = stats_response.json() 
@@ -430,7 +438,7 @@ class MenuUtilisateurVue(VueAbstraite):
                     else:
                         lignes.append("Détail par jour (agrégé): Aucune vue enregistrée.")
 
-                    # --- BLOC MODIFIÉ : Affichage graphique avec GÉO ---
+                    # --- (affichage des scans récents inchangé) ---
                     scans_recents = stats_data.get("scans_recents", [])
                     if scans_recents:
                         lignes.append("\nScans récents (détaillés):")
@@ -440,29 +448,26 @@ class MenuUtilisateurVue(VueAbstraite):
                             lang = self._parse_language(log.get("language"))
                             device = self._parse_device(log.get("user_agent"))
                             
-                            # --- AJOUT GÉO ---
                             city = log.get("geo_city")
                             country = log.get("geo_country")
                             geo_str = self._format_geo(city, country, client_ip)
-                            # --- FIN AJOUT GÉO ---
                             
-                            # Formatage aligné
-                            # ex: • Le 05/11/2025 à 11:17:38 | 📱 Windows   | 🌐 FR  | 📍 Rennes, France
                             lignes.append(f"  • {timestamp_str} | 📱 {device:<8} | 🌐 {lang:<3} | {geo_str} ({client_ip})")
                     else:
                         lignes.append("\nScans récents (détaillés): Aucun scan individuel trouvé.")
-                    # --- FIN DU BLOC MODIFIÉ ---
+                    # --- FIN ---
 
                     return MenuUtilisateurVue("\n".join(lignes))
                 
-                except requests.exceptions.HTTPError as http_err:
-                    try:
-                        detail = http_err.response.json().get('detail', http_err)
-                    except json.JSONDecodeError:
-                        detail = http_err.response.text
-                    if http_err.response.status_code == 404:
-                         return MenuUtilisateurVue(f"Info: {detail}")
-                    return MenuUtilisateurVue(f"Erreur API: {http_err.response.status_code} - {detail}")
+                except (requests.exceptions.HTTPError, ValueError) as err:
+                    # MODIFIÉ : Gestion d'erreur améliorée
+                    detail = str(err)
+                    if isinstance(err, requests.exceptions.HTTPError):
+                        try:
+                            detail = err.response.json().get('detail', err.response.text)
+                        except json.JSONDecodeError:
+                            detail = err.response.text
+                    return MenuUtilisateurVue(f"Erreur: {detail}")
                 except requests.exceptions.RequestException as req_err:
                     return MenuUtilisateurVue(f"Erreur de connexion à l'API: {req_err}")
                 except Exception as e:
@@ -471,9 +476,9 @@ class MenuUtilisateurVue(VueAbstraite):
 
             case "Créer un QR code (via API)":
                 try:
+                    # AJOUT : Récupération des headers d'authentification
+                    auth_headers = self._get_auth_headers()
                     user = self._get_current_user()
-                    if user is None:
-                        return MenuUtilisateurVue("Non connecté.")
                     id_user = getattr(user, "id_user", None)
                     if not id_user:
                         return MenuUtilisateurVue("Impossible de déterminer l'id utilisateur.")
@@ -500,7 +505,7 @@ class MenuUtilisateurVue(VueAbstraite):
                     api_endpoint = f"{API_BASE_URL.rstrip('/')}/qrcode/"
                     payload = {
                         "url": url,
-                        "id_proprietaire": str(id_user), 
+                        "id_proprietaire": str(id_user), # L'API le forcera à l'ID du token de toute façon
                         "type_qrcode": is_tracked,
                         "couleur": couleur,
                         "logo": logo
@@ -508,7 +513,8 @@ class MenuUtilisateurVue(VueAbstraite):
 
                     print(f"Appel de l'API POST {api_endpoint}...")
 
-                    response = requests.post(api_endpoint, json=payload, timeout=10)
+                    # MODIFIÉ : Utilisation des headers
+                    response = requests.post(api_endpoint, json=payload, headers=auth_headers, timeout=10)
                     response.raise_for_status() 
                     
                     response_data = response.json()
@@ -525,12 +531,15 @@ class MenuUtilisateurVue(VueAbstraite):
                     ]
                     return MenuUtilisateurVue("\n".join(lignes))
                 
-                except requests.exceptions.HTTPError as http_err:
-                    try:
-                        detail = http_err.response.json().get('detail', http_err)
-                    except json.JSONDecodeError:
-                        detail = http_err.response.text
-                    return MenuUtilisateurVue(f"Erreur API: {http_err.response.status_code} - {detail}")
+                except (requests.exceptions.HTTPError, ValueError) as err:
+                    # MODIFIÉ : Gestion d'erreur améliorée
+                    detail = str(err)
+                    if isinstance(err, requests.exceptions.HTTPError):
+                        try:
+                            detail = err.response.json().get('detail', err.response.text)
+                        except json.JSONDecodeError:
+                            detail = err.response.text
+                    return MenuUtilisateurVue(f"Erreur: {detail}")
                 except requests.exceptions.RequestException as req_err:
                     return MenuUtilisateurVue(f"Erreur de connexion à l'API: {req_err}")
                 except Exception as e:
