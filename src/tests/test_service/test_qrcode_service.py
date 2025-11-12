@@ -45,13 +45,13 @@ def test_creer_qrc_classique_ok():
     - L’image encode directement url
     """
     fake_dao = MagicMock()
-    q_created = Qrcode(id_qrcode=7, url="https://ex.com", id_proprietaire="3")
+    q_created = Qrcode(id_qrcode=7, url="https://ex.com", id_proprietaire=3)
     fake_dao.creer_qrc.return_value = q_created
 
     with patch("service.qrcode_service.generate_and_save_qr_png", return_value="/tmp/x.png"):
         with patch("service.qrcode_service.filepath_to_public_url", return_value="http://x/x.png"):
             service = QRCodeService(fake_dao)
-            res = service.creer_qrc("https://ex.com", "3", type_qrcode=False)
+            res = service.creer_qrc("https://ex.com", 3, type_qrcode=False)
 
     assert isinstance(res, Qrcode)
     assert res._scan_url is None
@@ -107,12 +107,12 @@ def test_supprimer_qrc_success():
     Suppression autorisée → le DAO est bien appelé.
     """
     fake_dao = MagicMock()
-    q = Qrcode(10, "https://ex.com", "3")
-    fake_dao.trouver_par_id.return_value = q
+    q = Qrcode(10, "https://ex.com", 3)
+    fake_dao.trouver_qrc_par_id_qrc.return_value = q
     fake_dao.supprimer_qrc.return_value = True
 
     service = QRCodeService(fake_dao)
-    assert service.supprimer_qrc(id_qrcode=10, id_user="3") is True
+    assert service.supprimer_qrc(id_qrcode=10, id_user=3) is True
 
 
 def test_supprimer_qrc_not_found():
@@ -120,7 +120,7 @@ def test_supprimer_qrc_not_found():
     Si le QR n'existe pas → QRCodeNotFoundError.
     """
     fake_dao = MagicMock()
-    fake_dao.trouver_par_id.return_value = None
+    fake_dao.trouver_qrc_par_id_qrc.return_value = None
 
     service = QRCodeService(fake_dao)
     with pytest.raises(QRCodeNotFoundError):
@@ -132,11 +132,11 @@ def test_supprimer_qrc_unauthorized():
     Si l'utilisateur n'est pas propriétaire → UnauthorizedError.
     """
     fake_dao = MagicMock()
-    fake_dao.trouver_par_id.return_value = Qrcode(10, "https://ex.com", "1")
+    fake_dao.trouver_qrc_par_id_qrc.return_value = Qrcode(10, "https://ex.com", 1)
 
     service = QRCodeService(fake_dao)
     with pytest.raises(UnauthorizedError):
-        service.supprimer_qrc(10, "4")
+        service.supprimer_qrc(10, 4)
 
 
 # -------------------------------------------------------------
@@ -145,8 +145,8 @@ def test_supprimer_qrc_unauthorized():
 def test_modifier_qrc_success():
     """Modification autorisée → OK."""
     fake_dao = MagicMock()
-    q = Qrcode(10, "https://ex.com", "3")
-    fake_dao.trouver_par_id.return_value = q
+    q = Qrcode(id_qrcode=10, url="https://ex.com", id_proprietaire=3)
+    fake_dao.trouver_qrc_par_id_qrc.return_value = q
     fake_dao.modifier_qrc.return_value = q
 
     with patch("service.qrcode_service.SCAN_BASE", "http://scan.me"), \
@@ -154,30 +154,37 @@ def test_modifier_qrc_success():
          patch("service.qrcode_service.filepath_to_public_url", return_value="http://x/f.png"):
 
         service = QRCodeService(fake_dao)
-        res = service.modifier_qrc(10, "3", url="https://new.com")
+        res = service.modifier_qrc(id_qrcode= 10, id_user=3, url="https://new.com")
 
     assert res is q
 
 
 
 def test_modifier_qrc_not_found():
+    """
+    Si le QR n'existe pas → QRCodeNotFoundError.
+    """
+
     fake_dao = MagicMock()
-    fake_dao.trouver_par_id.return_value = None
+    fake_dao.trouver_qrc_par_id_qrc.return_value = None
 
     service = QRCodeService(fake_dao)
     with pytest.raises(QRCodeNotFoundError):
-        service.modifier_qrc(10, "3")
+        service.modifier_qrc(10, 3)
 
 
 def test_modifier_qrc_unauthorized():
+    """
+    Si l'utilisateur n'est pas propriétaire → UnauthorizedError.
+    """
     fake_dao = MagicMock()
-    fake_dao.trouver_par_id.return_value = Qrcode(10, "https://ex.com", "3")
+    fake_dao.trouver_qrc_par_id_qrc.return_value = Qrcode(10, "https://ex.com", 3)
 
     service = QRCodeService(fake_dao)
     with pytest.raises(UnauthorizedError):
-        service.modifier_qrc(20, "u1", url="x")
+        service.modifier_qrc(20, 2, url="x")
 
-    fake_dao.trouver_qrc_par_id.assert_called_once_with(20)
+    fake_dao.trouver_qrc_par_id_qrc.assert_called_once_with(20)
 
 
 if __name__ == "__main__":

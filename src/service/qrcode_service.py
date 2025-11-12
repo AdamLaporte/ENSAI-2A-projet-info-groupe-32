@@ -98,15 +98,15 @@ class QRCodeService:
         return self.dao.lister_par_proprietaire(user_id_int)
 
 
-    def supprimer_qrc(self, id_qrcode: int, id_user: str) -> bool:
+    def supprimer_qrc(self, id_qrcode: int, id_user: int) -> bool:
         """
         Supprime un QR code après vérification du propriétaire.
         """
-        qr = self.dao.trouver_qrc_par_id_qrc(id_qrcode) # 'trouver_par_id' semble plus correct ici
+        qr = self.dao.trouver_qrc_par_id_qrc(id_qrcode) 
         if not qr:
             raise QRCodeNotFoundError(f"QR code {id_qrcode} introuvable.")
         
-        # S'assurer que les ID sont comparés au même type (ex: str vs str ou int vs int)
+        # S'assurer que les ID sont comparés au même type 
         if str(qr.id_proprietaire) != str(id_user):
             raise UnauthorizedError("Suppression non autorisée.")
         
@@ -125,7 +125,7 @@ class QRCodeService:
     def trouver_qrc_par_id(self, id_qrcode: int) -> Optional[Qrcode]:
         return self.dao.trouver_qrc_par_id_qrc(id_qrcode)
 
-    def modifier_qrc(self, id_qrcode: int, id_user: str,
+    def modifier_qrc(self, id_qrcode: int, id_user: int,
                      url: Optional[str] = None, type_qrcode: Optional[bool] = None,
                      couleur: Optional[str] = None, logo: Optional[str] = None) -> Qrcode:
         """
@@ -154,9 +154,9 @@ class QRCodeService:
 
         if nouveau_type_qrcode is False:
             # Cas 1: C'est (ou ça devient) un QR Statique.
-            # L'image DOIT contenir l'URL de destination.
+            # L'image DOIT contenir le contenu de destination.
             
-            if (qr.type_qrcode is True): # Il passe de Dynamique -> Statique
+            if (qr.type_qrcode is True): 
                 regenerate_image = True
                 payload_url_a_encoder = nouvelle_url
             
@@ -168,7 +168,7 @@ class QRCodeService:
                  regenerate_image = True
                  payload_url_a_encoder = nouvelle_url
 
-            elif (logo is not None and logo != qr.logo): # Statique et logo change
+            elif (logo is not None and logo != qr.logo): 
                  regenerate_image = True
                  payload_url_a_encoder = nouvelle_url
 

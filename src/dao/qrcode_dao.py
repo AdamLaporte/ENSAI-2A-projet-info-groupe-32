@@ -80,8 +80,8 @@ class QRCodeDao:
                         new_id, date_creation = res
 
                     # Hydrate l’objet
-                    qrcode._id_qrcode = new_id
-                    qrcode._date_creation = date_creation
+                    qrcode.id_qrcode = new_id
+                    qrcode.date_creation = date_creation
 
                 conn.commit()
 
