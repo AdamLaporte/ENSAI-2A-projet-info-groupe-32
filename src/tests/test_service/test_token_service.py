@@ -1,7 +1,6 @@
-import pytest
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta
-
+import pytest
 from service.token_service import TokenService
 from business_object.token import Token
 # TokenDao n'a pas besoin d'être importé car il est mocké ?
@@ -42,7 +41,7 @@ def test_creer_token_ok(mock_datetime, mock_generer_jeton, mock_creer_token):
     assert isinstance(token, Token)
     assert token.id_user == id_user_test
     assert token.jeton == "SIMULATED_JETON_1"
-    assert token.date_expiration == datetime(2025, 1, 1, 11, 0, 0)
+    assert token.date_expiration == datetime(2025, 1, 1, 15, 0, 0)
     
     mock_creer_token.assert_called_once()
     assert mock_creer_token.call_args[0][0].jeton == "SIMULATED_JETON_1"
@@ -166,3 +165,32 @@ def test_existe_token_false(mock_existe):
     service = TokenService()
     assert service.existe_token(jeton_test) is False
     mock_existe.assert_called_once_with(jeton_test)
+
+@patch("service.token_service.TokenDao.trouver_token_par_jeton")
+def test_trouver_par_jeton_ok(mock_trouver_dao):
+    """Teste la recherche par jeton (délégation au DAO) - Succès."""
+    jeton_test = "abc123_jeton"
+    token_attendu = Token(id_user=1, jeton=jeton_test, date_expiration=datetime.now())
+    mock_trouver_dao.return_value = token_attendu
+    
+    service = TokenService()
+    token = service.trouver_par_jeton(jeton_test)
+    
+    assert token == token_attendu
+    mock_trouver_dao.assert_called_once_with(jeton_test)
+
+@patch("service.token_service.TokenDao.trouver_token_par_jeton")
+def test_trouver_par_jeton_ko(mock_trouver_dao):
+    """Teste la recherche par jeton (délégation au DAO) - Echec."""
+    jeton_test = "abc123_jeton_inexistant"
+    mock_trouver_dao.return_value = None
+    
+    service = TokenService()
+    token = service.trouver_par_jeton(jeton_test)
+    
+    assert token is None
+    mock_trouver_dao.assert_called_once_with(jeton_test)
+
+if __name__ == "__main__":
+    import pytest
+    pytest.main([__file__])

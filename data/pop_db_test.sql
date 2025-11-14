@@ -40,4 +40,13 @@ FROM (VALUES
 ) AS s(url, nombre_vue, date_des_vues)
 JOIN urls u ON u.url = s.url;
 
+WITH urls AS (SELECT id_qrcode, url FROM qrcode)
+INSERT INTO logs_scan (id_qrcode, client_host, user_agent, date_scan, referer, accept_language, geo_country, geo_region, geo_city)
+SELECT u.id_qrcode, l.client_host, l.user_agent, l.date_scan, l.referer, l.lang, l.geo_country, l.geo_region, l.geo_city
+FROM (VALUES
+  ('https://t.local/u1/a', '192.168.1.10', 'Mozilla/5.0 (iPhone...)', TIMESTAMPTZ '2025-10-04 08:15:30Z', NULL, 'fr-FR,fr;q=0.9', 'France', 'Bretagne', 'Rennes'),
+  ('https://t.local/u1/a', '10.0.0.5',     'Mozilla/5.0 (Android...)', TIMESTAMPTZ '2025-10-04 14:45:01Z', 'https://google.com/', 'en-US,en;q=0.8', 'United States', 'California', 'Mountain View')
+) AS l(url, client_host, user_agent, date_scan, referer, lang, geo_country, geo_region, geo_city)
+JOIN urls u ON u.url = l.url;
+
 COMMIT;

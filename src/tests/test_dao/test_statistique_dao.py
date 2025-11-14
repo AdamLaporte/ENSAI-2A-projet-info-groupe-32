@@ -1,109 +1,139 @@
-import os 
-import pytest 
-from datetime import date 
-from random import randint
-from unittest.mock import patch 
-from utils.reset_database import ResetDatabase 
-from dao.statistique_dao import StatistiqueDao 
-from business_object.statistique import Statistique
+import os
+import pytest
+from datetime import date
+from unittest.mock import patch
 
-@pytest.fixture(scope="session", autouse=True)
+from utils.reset_database import ResetDatabase
+from dao.statistique_dao import StatistiqueDao
+from business_object.statistique import Statistique # Gardé pour le test de suppression
+
+#
+# SETUP DE TEST (Corrigé avec scope="function")
+#
+@pytest.fixture(scope="function", autouse=True)
 def setup_test_environment():
-    """Initialisation des données de test pour StatistiqueDao"""
-    # On force le schéma de tests via la variable utilisée par le code
+    """
+    Initialise une base dédiée aux tests.
+    Scope="function" : la base est réinitialisée AVANT CHAQUE TEST.
+    """
     with patch.dict(os.environ, {"POSTGRES_SCHEMA": "projet_test_dao"}):
+        # Assure-toi que pop_db_test.sql contient les données pour les QR 1, 2, 3
         ResetDatabase().lancer(test_dao=True)
     yield
 
-def test_lister_toutes():
-    """La méthode renvoie une liste de Utilisateur de taille ≥ 2"""
-    statistiques = StatistiqueDao().lister_toutes()
-    assert isinstance(statistiques, list)
-    assert all(isinstance(s, Statistique) for s in statistiques)
-    assert len(statistiques) >= 2
+#
+# TESTS DE LA NOUVELLE LOGIQUE (Tests Ajoutés)
+#
 
-def test_creer_stat_ok():
-    """Création d'une statistique réussie avec id auto-généré"""
-    id_qr = randint(1,9999)
-    nbr_vue = 2
-    dates = [date(2025,10,21), date(2025,11,3)]
-    s = Statistique(id_qrcode=id_qr, nombre_vue=nbr_vue, date_des_vues=date)
+def test_incrementer_vue_jour():
+    """
+    Teste que l'UPSERT de incrementer_vue_jour fonctionne.
+    On ajoute 2 vues à une date qui n'existe pas encore.
+    """
+    dao = StatistiqueDao()
+    id_qr_test = 1 # Doit exister dans pop_db_test.sql
+    date_test = date(2025, 11, 1) # Date non présente dans pop_db_test
 
-    ok = StatistiqueDao().creer_statistique(s)
+    # 1. Première vue à cette date (INSERT)
+    ok1 = dao.incrementer_vue_jour(id_qr_test, date_test)
+    assert ok1 is True
+
+    # 2. Deuxième vue à cette date (UPDATE)
+    ok2 = dao.incrementer_vue_jour(id_qr_test, date_test)
+    assert ok2 is True
+
+    # 3. Vérification
+    stats_jour = dao.get_stats_par_jour(id_qr_test)
+    
+    # Trouve l'entrée pour notre date de test
+    entree_test = next((s for s in stats_jour if s["date_des_vues"] == date_test), None)
+    
+    assert entree_test is not None
+    assert entree_test["nombre_vue"] == 2
+
+def test_get_agregats_ok():
+    """
+    Teste la récupération des agrégats pour un QR code
+    basé sur les données de pop_db_test.sql.
+    QR 1 a 2 entrées : (0 vues, 2025-10-01) et (5 vues, 2025-10-02)
+   
+    """
+    dao = StatistiqueDao()
+    id_qr_test = 1
+    
+    agregats = dao.get_agregats(id_qr_test)
+    
+    assert agregats is not None
+    assert agregats["total_vues"] == 5 # 0 + 5
+    assert agregats["premiere_vue"] == date(2025, 10, 1)
+    assert agregats["derniere_vue"] == date(2025, 10, 2)
+
+def test_get_agregats_aucun_resultat():
+    """
+    Teste les agrégats pour un QR code qui n'a aucune stat.
+    """
+    dao = StatistiqueDao()
+    id_qr_inexistant = 999
+    
+    agregats = dao.get_agregats(id_qr_inexistant)
+    
+    assert agregats is not None
+    assert agregats["total_vues"] == 0
+    assert agregats["premiere_vue"] is None
+    assert agregats["derniere_vue"] is None
+
+def test_get_stats_par_jour_ok():
+    """
+    Teste la récupération de l'historique par jour (basé sur pop_db_test.sql)
+    """
+    dao = StatistiqueDao()
+    id_qr_test = 1
+    
+    historique = dao.get_stats_par_jour(id_qr_test)
+    
+    assert isinstance(historique, list)
+    assert len(historique) == 2 # 2 jours de stats pour QR 1
+    assert historique[0]["date_des_vues"] == date(2025, 10, 1)
+    assert historique[0]["nombre_vue"] == 0
+    assert historique[1]["date_des_vues"] == date(2025, 10, 2)
+    assert historique[1]["nombre_vue"] == 5
+
+#
+# TEST CORRIGÉ (Erreur de copier-coller)
+#
+def test_supprimer_statistique_ok():
+    """
+    Correction du test de suppression.
+    La méthode DAO 'supprimer' supprime TOUTES les stats d'un id_qrcode.
+   
+    """
+    dao = StatistiqueDao()
+    id_qr_a_supprimer = 1
+    
+    # Vérifier qu'il y a bien des stats avant
+    agregats_avant = dao.get_agregats(id_qr_a_supprimer)
+    assert agregats_avant["total_vues"] > 0
+    
+    # Créer un objet Statistique factice juste pour passer l'ID (selon la signature)
+    stat_factice = Statistique(id_qrcode=id_qr_a_supprimer)
+    
+    ok = dao.supprimer(stat_factice)
     assert ok is True
-    assert isinstance(s.id_stat, int) and s.id_stat > 0
+    
+    # Vérifier qu'il n'y a plus de stats après
+    agregats_apres = dao.get_agregats(id_qr_a_supprimer)
+    assert agregats_apres["total_vues"] == 0
 
-    # Vérifier existence par id
-    s_db = StatistiqueDao().trouver_par_id_qrcode(s.id_qrcode)
-    assert s_db is not None
-    assert s_db.id_qrcode == id_qr
+def test_supprimer_statistique_ko():
+    """
+    Teste la suppression d'une stat pour un qrcode inexistant.
+    """
+    dao = StatistiqueDao()
+    stat_factice = Statistique(id_qrcode=99999)
+    
+    ok = dao.supprimer(stat_factice)
+    assert ok is False # rowcount == 0
 
-def test_creer_stat_ko():
-    """Création échouée si données invalides"""
-    # données manquantes
-    s = Statistique(id_qrcode=None, nombre_vue=None, date_des_vues=None)
-    ok = StatistiqueDao().creer_statistique(s)
-    assert ok is False
-
-def test_trouver_par_id_stat_existant():
-    """Recherche par id_stat d'une statistique existant"""
-    # On crée une stat pour être sûr de l’existence
-    id_qrcode = randint(1,9999)
-    nombre_vue = 2
-    date_des_vues = [date(2025,10,21), date(2025,11,3)]
-    s = Statistique(id_qrcode=id_qrcode, nombre_vue= nombre_vue, date_des_vues=date_des_vues)
-    StatistiqueDao().creer_statistique(s)
-
-    statistique = StatistiqueDao().trouver_par_id_stat(s.id_stat)
-    assert statistique is not None
-    assert isinstance(statistique, Statistique)
-    assert statistique.id_qrcode == s.id_qrcode
-    assert statistique.id_stat == s.id_stat
-
-
-def test_trouver_par_id_stat_non_existant():
-    """Recherche par id_user inexistant"""
-    statistique = StatistiqueDao().trouver_par_id_stat(999999)
-    assert statistique is None
-
-def test_modifier_stat_ok():
-    """Modification"""
-    # Crée une statistique
-    id_qrcode = randint(1,9999)
-    nbr_vue = 2
-    date_des_vues = [date(2025,10,21), date(2025,11,2)]
-    s = Statistique(id_qrcode=id_qrcode, nombre_vue=nbr_vue, date_des_vues=date_des_vues)
-    StatistiqueDao().creer_statistique(s)
-
-    # Modifie son nbr_vue et date_des_vues
-    s._nombre_vue += 1
-    date_des_vues = date_des_vues.append(date(2025,11,5))
-    assert StatistiqueDao().modifier_statistique(s) is not None
-
-    # Vérifier en base
-    s_db = StatistiqueDao().trouver_par_id_stat(s.id_stat)
-    assert s_db is not None
-    assert s_db == 3
-    assert s_db.date_des_vues == [date(2025,10,21), date(2025,11,2), date(2025,11,5)]
-
-def test_modifier_stat_ko():
-    """Modification échouée (id_qrcode inexistant)"""
-    s = Statistique(id_qrcode=999999, nombre_vue=1, date_des_vues=[date(2025,11,2)])
-    ok = StatistiqueDao().modifier_statistique(s)
-    assert ok is False
-
-def test_supprimer_ok():
-    """Suppression réussie"""
-    nom_user = "to_delete"
-    u = Utilisateur(nom_user=nom_user, mdp=hash_password("pwd", nom_user))
-    UtilisateurDao().creer_user(u)
-
-    ok = UtilisateurDao().supprimer(u)
-    assert ok is True
-    assert UtilisateurDao().trouver_par_id_user(u.id_user) is None
-
-def test_supprimer_ko():
-    """Suppression échouée (id inexistant)"""
-    u = Utilisateur(id_user=999999, nom_user="ghost", mdp="irrelevant")
-    ok = UtilisateurDao().supprimer(u)
-    assert ok is False
+if __name__ == "__main__":
+    import pytest
+    pytest.main([__file__])

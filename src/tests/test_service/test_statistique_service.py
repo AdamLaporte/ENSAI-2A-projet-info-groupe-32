@@ -1,153 +1,116 @@
-from unittest.mock import MagicMock
-from datetime import date 
-from random import randint
+from unittest.mock import MagicMock, patch
+from datetime import date, datetime
 from service.statistique_service import StatistiqueService
+import pytest
 from dao.statistique_dao import StatistiqueDao
-from business_object.statistique import Statistique
+from dao.log_scan_dao import LogScanDao
 
-# Liste de statistiques pour les tests
-liste_statistiques = [
-    Statistique(id_qrcode=1234, nombre_vue=1, date_des_vues = [date(2025,10,1)]),
-    Statistique(id_qrcode=5678, nombre_vue=2, date_des_vues = [date(2025,10,21), date(2025,9,25)]),
-    Statistique(id_qrcode=9999, nombre_vue=7, date_des_vues = [date(2025,8,17),date(2025,9,27), date(2025,10,19)]),
-]
 
-def test_creer_statistique_ok():
-    """Création d'une Statistique réussie"""
-    # GIVEN
-    id_qrcode, nombre_vue, date_des_vues = randint(1,9999), 1, [date(randint(1994,2025),randint(1,12),randint(1,28))]
-    StatistiqueDao().creer_statistique = MagicMock(return_value=True)
+def test_enregistrer_vue():
+    """
+    Teste que le service 'enregistrer_vue' appelle bien
+    la méthode 'incrementer_vue_jour' du DAO.
+    """
+    with patch.object(StatistiqueDao, 'incrementer_vue_jour', return_value=True) as mock_increment:
+        service = StatistiqueService()
+        id_qr = 1
+        date_test = date(2025, 10, 1)
+        
+        resultat = service.enregistrer_vue(id_qr, date_test)
+        
+        assert resultat is True
+        mock_increment.assert_called_once_with(id_qr, date_test)
 
-    # WHEN
-    statistique = StatistiqueService().creer_statistique(id_qrcode, nombre_vue, date_des_vues)
+def test_get_statistiques_qr_code_detail_complet():
+    """
+    Teste l'orchestration de 'get_statistiques_qr_code' avec detail=True.
+    Le service doit appeler les 3 méthodes DAO et agréger les résultats.
+    """
+    # 1. Préparer les Mocks
+    mock_agregats = {"total_vues": 10, "premiere_vue": date(2025, 1, 1), "derniere_vue": date(2025, 1, 5)}
+    mock_par_jour = [{"date_des_vues": date(2025, 1, 1), "nombre_vue": 10}]
+    mock_scans_recents = [{
+        "date_scan": datetime(2025, 1, 1, 12, 30, 0),
+        "client_host": "1.2.3.4",
+        "user_agent": "TestAgent",
+        "referer": None,
+        "accept_language": "fr-FR",
+        "geo_country": "France",
+        "geo_region": "Bretagne",
+        "geo_city": "Rennes"
+    }]
 
-    # THEN
-    assert statistique.id_qrcode == id_qrcode
-    assert statistique.nombre_vue == nombre_vue
-    assert statistique.date_des_vues == date_des_vues
+    # 2. Patcher les méthodes DAO
+    # Note: On patche les méthodes sur les classes importées dans le module service
+    with patch('service.statistique_service.StatistiqueDao.get_agregats', return_value=mock_agregats) as mock_get_agg, \
+         patch('service.statistique_service.StatistiqueDao.get_stats_par_jour', return_value=mock_par_jour) as mock_get_jour, \
+         patch('service.statistique_service.LogScanDao.get_scans_recents', return_value=mock_scans_recents) as mock_get_logs:
 
-def test_creer_statistique_echec():
-    """Création d'une Statistique échouée (DAO retourne False)"""
-    # GIVEN
-    id_qrcode, nombre_vue, date_des_vues = randint(1,9999), 2, [date(randint(1994,2025),randint(1,12),randint(1,28))]
-    StatistiqueDao().creer_statistique = MagicMock(return_value=False)
+        # 3. Appeler le service
+        service = StatistiqueService()
+        resultat = service.get_statistiques_qr_code(id_qrcode=1, detail=True)
+        
+        # 4. Vérifier les appels
+        mock_get_agg.assert_called_once_with(1)
+        mock_get_jour.assert_called_once_with(1)
+        mock_get_logs.assert_called_once_with(1)
+        
+        # 5. Vérifier le résultat
+        assert resultat["id_qrcode"] == 1
+        assert resultat["total_vues"] == 10
+        assert resultat["premiere_vue"] == "2025-01-01" # Conversion en ISO string
+        assert len(resultat["par_jour"]) == 1
+        assert resultat["par_jour"][0]["vues"] == 10
+        assert len(resultat["scans_recents"]) == 1
+        assert resultat["scans_recents"][0]["geo_city"] == "Rennes"
 
-    # WHEN
-    statistique = StatistiqueService().creer_statistique(id_qrcode, nombre_vue, date_des_vues)
+def test_get_statistiques_qr_code_no_detail():
+    """
+    Teste 'get_statistiques_qr_code' avec detail=False.
+    Le service NE DOIT PAS appeler get_stats_par_jour et get_scans_recents.
+    """
+    mock_agregats = {"total_vues": 10, "premiere_vue": date(2025, 1, 1), "derniere_vue": date(2025, 1, 5)}
 
-    # THEN
-    assert statistique is None
+    with patch('service.statistique_service.StatistiqueDao.get_agregats', return_value=mock_agregats) as mock_get_agg, \
+         patch('service.statistique_service.StatistiqueDao.get_stats_par_jour') as mock_get_jour, \
+         patch('service.statistique_service.LogScanDao.get_scans_recents') as mock_get_logs:
 
-def test_lister_tous():
-    """Lister toutes les statistiques"""
-    # GIVEN
-    StatistiqueDao().lister_tous = MagicMock(return_value=liste_statistiques)
+        service = StatistiqueService()
+        resultat = service.get_statistiques_qr_code(id_qrcode=1, detail=False)
+        
+        # Seul get_agregats doit être appelé
+        mock_get_agg.assert_called_once_with(1)
+        mock_get_jour.assert_not_called()
+        mock_get_logs.assert_not_called()
+        
+        # Le résultat ne contient pas les clés de détail
+        assert "par_jour" not in resultat
+        assert "scans_recents" not in resultat
+        assert resultat["total_vues"] == 10
 
-    # WHEN
-    res = StatistiqueService().lister_tous()
+def test_get_statistiques_qr_code_no_data():
+    """
+    Teste le cas où 'get_agregats' retourne None (ou 0 vues).
+    Le service doit retourner une structure valide avec 0.
+    """
+    # get_agregats retourne None si le QR n'est pas trouvé
+    mock_agregats = None 
 
-    # THEN
-    assert len(res) == 3
-    assert all(isinstance(s, Statistique) for s in res)
+    with patch('service.statistique_service.StatistiqueDao.get_agregats', return_value=mock_agregats) as mock_get_agg, \
+         patch('service.statistique_service.StatistiqueDao.get_stats_par_jour', return_value=[]) as mock_get_jour, \
+         patch('service.statistique_service.LogScanDao.get_scans_recents', return_value=[]) as mock_get_logs:
 
-def test_trouver_par_id_qrcode_ok():
-    """Trouver une statistique par id_qrcode - succès"""
-    # GIVEN
-    id_qrcode = randint(1,9999)
-    statistique_attendue = Statistique(id_qrcode, nombre_vue=1, date_des_vues=[date(2025,10,21)])
-    StatistiqueDao().trouver_par_id_qrcode = MagicMock(return_value=statistique_attendue)
-
-    # WHEN
-    res = StatistiqueService().trouver_par_id_qrcode(id_qrcode)
-
-    # THEN
-    assert res.id_qrcode == id_qrcode
-    assert res.nombre_vue == 1
-
-def test_trouver_par_id_qrcode_non_trouve():
-    """Trouver une statistique par id_qrcode - non trouvé"""
-    # GIVEN
-    id_qrcode = "inexistant"
-    StatistiqueDao().trouver_par_id_qrcode = MagicMock(return_value=None)
-
-    # WHEN
-    res = StatistiqueService().trouver_par_id_qrcode(id_qrcode)
-
-    # THEN
-    assert res is None
-
-def test_modifier_statistique_ok():
-    """Modification d'une statistique réussie"""
-    # GIVEN
-    statistique = Statistique(id_qrcode=randint(1,9999), nombre_vue=1, date_des_vues=[date(2025,10,10)])
-    StatistiqueDao().modifier_statistique = MagicMock(return_value=True)
-
-    # WHEN
-    res = StatistiqueService().modifier_statistique(statistique)
-
-    # THEN
-    assert res.nombre_vue == 1
-    assert res.date_des_vues == [date(2025,10,10)]
-
-def test_modifier_statistique_echec():
-    """Modification d'une statistique échouée"""
-    # GIVEN
-    statistique = Statistique(id_qrcode=randint(1,9999), nombre_vue=1, date_des_vues=[date(2025,10,10)])
-    StatistiqueDao().modifier_statistique = MagicMock(return_value=False)
-
-    # WHEN
-    res = StatistiqueService().modifier_statistique(statistique)
-
-    # THEN
-    assert res is None
-
-def test_supprimer_ok():
-    """Suppression d'une statistique réussie"""
-    # GIVEN
-    statistique = Statistique(id_qrcode=randint(1,9999), nombre_vue=7, date_des_vues=[date(2025,10,10)])
-    StatistiqueDao().supprimer = MagicMock(return_value=True)
-
-    # WHEN
-    res = StatistiqueService().supprimer(statistique)
-
-    # THEN
-    assert res is True
-
-def test_supprimer_echec():
-    """Suppression d'une statistique échouée"""
-    # GIVEN
-    statistique = Statistique(id_qrcode=randint(1,9999), nombre_vue=0, date_des_vues=[date(2025,10,20)])
-    StatistiqueDao().supprimer = MagicMock(return_value=False)
-
-    # WHEN
-    res = StatistiqueService().supprimer(statistique)
-
-    # THEN
-    assert res is False
-
-def test_id_qrcode_deja_utilise_oui():
-    """id_qrcode déjà utilisé"""
-    # GIVEN
-    id_qrcode = 1234
-    StatistiqueDao().lister_tous = MagicMock(return_value=liste_statistiques)
-
-    # WHEN
-    res = StatistiqueService().id_qrcode_deja_utilise(id_qrcode)
-
-    # THEN
-    assert res is True
-
-def test_id_qrcode_deja_utilise_non():
-    """id_qrcode non utilisé"""
-    # GIVEN
-    id_qrcode = "nouveau_qrcode"
-    StatistiqueDao().lister_tous = MagicMock(return_value=liste_statistiques)
-
-    # WHEN
-    res = StatistiqueService().id_qrcode_deja_utilise(id_qrcode)
-
-    # THEN
-    assert res is False
+        service = StatistiqueService()
+        resultat = service.get_statistiques_qr_code(id_qrcode=999, detail=True)
+        
+        mock_get_agg.assert_called_once_with(999)
+        
+        assert resultat["id_qrcode"] == 999
+        assert resultat["total_vues"] == 0
+        assert resultat["premiere_vue"] is None
+        assert resultat["derniere_vue"] is None
+        assert resultat["par_jour"] == []
+        assert resultat["scans_recents"] == []
 
 if __name__ == "__main__":
     import pytest

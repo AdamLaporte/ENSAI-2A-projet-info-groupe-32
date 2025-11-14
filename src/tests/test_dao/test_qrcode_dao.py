@@ -1,7 +1,6 @@
-
 import os
-from unittest.mock import MagicMock, patch
 import pytest
+from unittest.mock import MagicMock, patch
 from datetime import datetime
 
 
@@ -10,7 +9,7 @@ from dao.qrcode_dao import QRCodeDao, QRCodeNotFoundError, UnauthorizedError
 from business_object.qr_code import Qrcode
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def setup_test_environment():
     """
     Initialise une base dédiée aux tests d'intégration.
@@ -124,3 +123,38 @@ def test_supprimer_returns_true_or_false():
 
     # cas échec (id inexistant)
     assert dao.supprimer_qrc(999999) is False
+
+def test_lister_par_proprietaire_ok():
+    """
+    Vérifie que la liste des QR codes est correcte pour un utilisateur.
+    La BDD de test (pop_db_test.sql) crée l'utilisateur 'test_u3' (id 3)
+    et lui assigne un QR code.
+   
+    """
+    dao = QRCodeDao()
+    id_user_3 = 3  # Basé sur pop_db_test.sql
+    
+    resultats = dao.lister_par_proprietaire(id_user_3)
+    
+    assert isinstance(resultats, list)
+    assert len(resultats) == 1
+    assert isinstance(resultats[0], Qrcode)
+    assert resultats[0].url == "https://t.local/u3/c"
+
+def test_lister_par_proprietaire_aucun_resultat():
+    """
+    Vérifie qu'une liste vide est retournée pour un utilisateur
+    qui n'a pas de QR codes (ou un ID inexistant).
+    """
+    dao = QRCodeDao()
+    id_user_inexistant = 99999
+    
+    resultats = dao.lister_par_proprietaire(id_user_inexistant)
+    
+    assert isinstance(resultats, list)
+    assert len(resultats) == 0
+
+
+if __name__ == "__main__":
+    import pytest
+    pytest.main([__file__])

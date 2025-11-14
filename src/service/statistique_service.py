@@ -82,7 +82,7 @@ class StatistiqueService:
             # 3.1. Stats par jour (depuis StatistiqueDao)
             rows = stat_dao.get_stats_par_jour(id_qrcode)
             result["par_jour"] = [
-                {"date": r["date_des_vues"].isoformat(), "vues": int(r["nombre_vue"])}
+                {"date": r["date_des_vues"].isoformat(), "vues": int(r.get("nombre_vue", 0))}
                 for r in rows
             ]
 

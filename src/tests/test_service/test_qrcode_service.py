@@ -1,9 +1,8 @@
 # tests/test_service/test_qrcode_service.py
 
 from unittest.mock import MagicMock, patch
-import pytest
 from datetime import datetime
-
+import pytest
 from service.qrcode_service import QRCodeService, QRCodeNotFoundError, UnauthorizedError
 from business_object.qr_code import Qrcode
 
@@ -186,6 +185,124 @@ def test_modifier_qrc_unauthorized():
 
     fake_dao.trouver_qrc_par_id_qrc.assert_called_once_with(20)
 
+# --- Tests pour trouver_qrc_par_id ---
+
+def test_trouver_qrc_par_id_ok():
+    """
+    Teste la recherche simple par ID via le service.
+    """
+    fake_dao = MagicMock()
+    expected_qr = Qrcode(id_qrcode=1, url="http://test.com", id_proprietaire=1)
+    fake_dao.trouver_qrc_par_id_qrc.return_value = expected_qr
+    
+    service = QRCodeService(fake_dao)
+    result = service.trouver_qrc_par_id(1)
+    
+    assert result == expected_qr
+    fake_dao.trouver_qrc_par_id_qrc.assert_called_once_with(1)
+
+def test_trouver_qrc_par_id_non_trouve():
+    """
+    Teste la recherche simple par ID (non trouvé) via le service.
+    """
+    fake_dao = MagicMock()
+    fake_dao.trouver_qrc_par_id_qrc.return_value = None
+    
+    service = QRCodeService(fake_dao)
+    result = service.trouver_qrc_par_id(999)
+    
+    assert result is None
+    fake_dao.trouver_qrc_par_id_qrc.assert_called_once_with(999)
+
+# --- Test pour la logique de création (SCAN_BASE manquant) ---
+
+def test_creer_qrc_suivi_echec_env_var():
+    """
+    Teste que la création d'un QR suivi (type_qrcode=True) échoue
+    si SCAN_BASE n'est pas défini dans l'environnement.
+   
+    """
+    fake_dao = MagicMock()
+    q_created = Qrcode(id_qrcode=10, url="https://ex.com", id_proprietaire="3")
+    fake_dao.creer_qrc.return_value = q_created
+
+    service = QRCodeService(fake_dao)
+    
+    # Simule l'absence de la variable d'environnement
+    with patch("service.qrcode_service.SCAN_BASE", None):
+        with pytest.raises(RuntimeError, match="SCAN_BASE_URL n'est pas configuré"):
+            service.creer_qrc(url="https://ex.com", id_proprietaire="3", type_qrcode=True)
+
+# --- Tests pour la logique de re-génération d'image dans modifier_qrc ---
+
+@patch("service.qrcode_service.generate_and_save_qr_png")
+def test_modifier_qrc_statique_change_url_regenere(mock_gen_png):
+    """
+    Modifier l'URL d'un QR statique (type=False) DOIT re-générer l'image.
+   
+    """
+    fake_dao = MagicMock()
+    qr_statique = Qrcode(10, "https://old.com", 3, type_qrcode=False)
+    fake_dao.trouver_qrc_par_id_qrc.return_value = qr_statique
+    fake_dao.modifier_qrc.return_value = qr_statique # Retourne l'objet modifié
+
+    service = QRCodeService(fake_dao)
+    service.modifier_qrc(id_qrcode=10, id_user=3, url="https://new.com")
+    
+    mock_gen_png.assert_called_once() # L'image a été re-générée
+
+@patch("service.qrcode_service.generate_and_save_qr_png")
+def test_modifier_qrc_dynamique_change_url_ne_regenere_pas(mock_gen_png):
+    """
+    Modifier l'URL d'un QR dynamique (type=True) NE DOIT PAS re-générer l'image.
+    (Car l'image contient l'URL de scan, qui ne change pas).
+    """
+    fake_dao = MagicMock()
+    qr_dynamique = Qrcode(10, "https://old.com", 3, type_qrcode=True)
+    fake_dao.trouver_qrc_par_id_qrc.return_value = qr_dynamique
+    fake_dao.modifier_qrc.return_value = qr_dynamique
+
+    service = QRCodeService(fake_dao)
+    # Simule SCAN_BASE pour que le service ne plante pas
+    with patch("service.qrcode_service.SCAN_BASE", "http://scan.me"):
+        service.modifier_qrc(id_qrcode=10, id_user=3, url="https://new.com")
+    
+    mock_gen_png.assert_not_called() # L'image n'a PAS été re-générée
+
+@patch("service.qrcode_service.generate_and_save_qr_png")
+def test_modifier_qrc_change_couleur_regenere(mock_gen_png):
+    """
+    Modifier la COULEUR d'un QR (statique ou dynamique) DOIT re-générer l'image.
+   
+    """
+    fake_dao = MagicMock()
+    qr_dynamique = Qrcode(10, "https://url.com", 3, type_qrcode=True, couleur="black")
+    fake_dao.trouver_qrc_par_id_qrc.return_value = qr_dynamique
+    fake_dao.modifier_qrc.return_value = qr_dynamique
+
+    service = QRCodeService(fake_dao)
+    with patch("service.qrcode_service.SCAN_BASE", "http://scan.me"):
+        service.modifier_qrc(id_qrcode=10, id_user=3, couleur="blue")
+    
+    mock_gen_png.assert_called_once() # L'image a été re-générée
+
+@patch("service.qrcode_service.generate_and_save_qr_png")
+def test_modifier_qrc_passe_statique_a_dynamique_regenere(mock_gen_png):
+    """
+    Changer un QR de statique (False) à dynamique (True) DOIT re-générer l'image.
+    (Car l'image doit maintenant contenir l'URL de scan).
+   
+    """
+    fake_dao = MagicMock()
+    qr_statique = Qrcode(10, "https://url.com", 3, type_qrcode=False)
+    fake_dao.trouver_qrc_par_id_qrc.return_value = qr_statique
+    fake_dao.modifier_qrc.return_value = qr_statique
+
+    service = QRCodeService(fake_dao)
+    with patch("service.qrcode_service.SCAN_BASE", "http://scan.me"):
+        service.modifier_qrc(id_qrcode=10, id_user=3, type_qrcode=True)
+    
+    mock_gen_png.assert_called_once() # L'image a été re-générée
 
 if __name__ == "__main__":
     import pytest

@@ -2,6 +2,7 @@ from unittest.mock import MagicMock
 from service.utilisateur_service import UtilisateurService
 from dao.utilisateur_dao import UtilisateurDao
 from business_object.utilisateur import Utilisateur
+import pytest
 
 # Jeu d'utilisateurs cohérent avec le nouveau modèle
 liste_utilisateurs = [

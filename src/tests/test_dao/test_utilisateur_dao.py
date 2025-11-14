@@ -1,7 +1,6 @@
 import os
-import pytest
 from unittest.mock import patch
-
+import pytest
 from utils.reset_database import ResetDatabase
 from utils.securite import hash_password
 
@@ -9,7 +8,7 @@ from dao.utilisateur_dao import UtilisateurDao
 from business_object.utilisateur import Utilisateur
 from service.utilisateur_service import UtilisateurService
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def setup_test_environment():
     """Initialisation des données de test pour UtilisateurDao"""
     # On force le schéma de tests via la variable utilisée par le code
@@ -140,5 +139,11 @@ def test_se_connecter_ko():
     res = UtilisateurDao().se_connecter(nom_user, bad_hash)
     assert res is None
 
+def test_trouver_par_nom_user_non_existant():
+    """Recherche par nom_user inexistant"""
+    utilisateur = UtilisateurDao().trouver_par_nom_user("utilisateur_fantome_99")
+    assert utilisateur is None
+
 if __name__ == "__main__":
+    import pytest
     pytest.main([__file__])

@@ -1,227 +1,150 @@
+import os
 import pytest
-import string
-import secrets
-from unittest.mock import patch, MagicMock
-from datetime import datetime, timedelta
+from unittest.mock import patch
+from datetime import datetime, timedelta, timezone
 
-from business_object.token import Token
+from utils.reset_database import ResetDatabase
 from dao.token_dao import TokenDao
+from business_object.token import Token
+from business_object.utilisateur import Utilisateur
+from dao.utilisateur_dao import UtilisateurDao # Nécessaire pour créer un utilisateur de test
 
-# Tests pour creer_token
+#
+# SETUP DE TEST (Utilise la VRAIE BDD de test)
+#
+@pytest.fixture(scope="function", autouse=True)
+def setup_test_environment():
+    """
+    Initialise une base dédiée aux tests.
+    Scope="function" : la base est réinitialisée AVANT CHAQUE TEST.
+    """
+    with patch.dict(os.environ, {"POSTGRES_SCHEMA": "projet_test_dao"}):
+        ResetDatabase().lancer(test_dao=True)
+    yield
 
-@patch('dao.token_dao.DBConnection')
-def test_creer_token_ok(MockDBConnection):
-    """ Création d'un token réussie avec ID auto-généré. """
+#
+# TESTS DAO (corrigés, sans mocks)
+#
 
-    mock_conn = MockDBConnection.return_value.connection.__enter__.return_value
-    mock_cursor = mock_conn.cursor.return_value.__enter__.return_value
+def test_creer_token_ok():
+    """ Création d'un token réussie. """
+    dao = TokenDao()
     
-    mock_cursor.fetchone.return_value = (1,) 
+    # On utilise l'utilisateur 'test_u3' (id 3) créé par pop_db_test.sql
+    user_id = 3
+    token = Token(
+        id_user=user_id, 
+        jeton="un_jeton_de_test_valide_123", 
+        date_expiration=datetime.now(timezone.utc) + timedelta(days=1)
+    )
 
-    token = Token(id_user=1, jeton="gpVU0x1IzZbP0ScIopiGLlZO5EzhtaAM", date_expiration=datetime(2025, 10, 10, 14, 30))
-
-    ok = TokenDao().creer_token(token)
-
-    assert ok is True  
+    ok = dao.creer_token(token)
+    assert ok is True
 
     # Vérification de l'existence du token dans la base de données
-    """ token_db = TokenDao().trouver_par_id_user(token.id_user)
+    token_db = dao.trouver_token_par_id(user_id)
     assert token_db is not None
     assert token_db.id_user == token.id_user
     assert token_db.jeton == token.jeton
-    assert token_db.date_expiration == token.date_expiration """
 
-def test_creer_token_echec():
-    """Création échouée si données invalides"""
-    t = Token(id_user= 10, jeton=None, date_expiration=None)
-    ok = TokenDao().creer_token(t)
+def test_creer_token_echec_user_inexistant():
+    """Création échouée si l'id_user n'existe pas (contrainte de clé étrangère)."""
+    dao = TokenDao()
+    token = Token(
+        id_user=99999, # ID Inexistant
+        jeton="jeton_pour_user_fantome", 
+        date_expiration=datetime.now(timezone.utc) + timedelta(days=1)
+    )
+    
+    # Le DAO retourne False car la BDD lève une exception (IntegritError)
+    ok = dao.creer_token(token)
     assert ok is False
 
-## Test pour trouver_token_par_id
-
-@patch('dao.token_dao.DBConnection')
-def test_trouver_token_par_id_success(MockDBConnection):
-    """ Recherche par id_user d'un utilisateur existant (Mocké) """
+def test_trouver_token_par_id_success():
+    """ 
+    Recherche par id_user d'un token existant.
+    'test_u1' (id 1) a un token dans pop_db_test.sql.
+   
+    """
+    dao = TokenDao()
+    id_user_test = 1
     
-    id_user_test = 10
-    jeton_test = "gpVU0x1IzZbP0ScIopiGLlZO5EzhtaAM"
-    date_exp_test = datetime(2030, 1, 1, 1, 1)
-
-    mock_conn = MockDBConnection.return_value.connection.__enter__.return_value
-    mock_cursor = mock_conn.cursor.return_value.__enter__.return_value
-
-    mock_cursor.fetchone.return_value = {
-        "id_user": id_user_test, 
-        "jeton": jeton_test, 
-        "date_expiration": date_exp_test
-    }
-    
-    token_recupere = TokenDao().trouver_token_par_id(id_user_test)
+    token_recupere = dao.trouver_token_par_id(id_user_test)
     
     assert token_recupere is not None
     assert isinstance(token_recupere, Token)
-    assert token_recupere.jeton == jeton_test
-    assert token_recupere.date_expiration == date_exp_test
-    assert token_recupere.id_user == id_user_test 
+    assert token_recupere.jeton == "tok_test_u1"
+    assert token_recupere.id_user == id_user_test
 
-@patch('dao.token_dao.DBConnection')
-def test_trouver_token_par_id_echec(MockDBConnection):
-    """ Recherche par id_user inexistant (Mocké) """
+def test_trouver_token_par_id_echec():
+    """ 
+    Recherche par id_user d'un utilisateur sans token.
+    'test_u3' (id 3) n'a pas de token dans pop_db_test.sql.
+   
+    """
+    dao = TokenDao()
+    id_user_test = 3
     
-    mock_conn = MockDBConnection.return_value.connection.__enter__.return_value
-    mock_cursor = mock_conn.cursor.return_value.__enter__.return_value
-    
-    mock_cursor.fetchone.return_value = None 
-
-    token_recupere = TokenDao().trouver_token_par_id(999999) # id inexistant
+    token_recupere = dao.trouver_token_par_id(id_user_test) 
     assert token_recupere is None
 
+def test_trouver_token_par_jeton_success():
+    """
+    Teste la VRAIE méthode : trouver_token_par_jeton (succès).
+    """
+    dao = TokenDao()
+    jeton_test = "tok_test_u1" # Existe dans pop_db_test.sql
+    
+    token_recupere = dao.trouver_token_par_jeton(jeton_test)
+    
+    assert token_recupere is not None
+    assert isinstance(token_recupere, Token)
+    assert token_recupere.id_user == 1 # Appartient à test_u1
+    assert token_recupere.jeton == jeton_test
 
-## Tests pour supprimer_token
+def test_trouver_token_par_jeton_echec():
+    """
+    Teste la VRAIE méthode : trouver_token_par_jeton (échec).
+    """
+    dao = TokenDao()
+    jeton_test = "jeton_inexistant_XYZ"
+    
+    token_recupere = dao.trouver_token_par_jeton(jeton_test)
+    assert token_recupere is None
 
-@patch('dao.token_dao.DBConnection')
-def test_supprimer_token_succes(MockDBConnection):
-    """Teste la suppression réussie d'un token existant (rowcount == 1)."""
+def test_supprimer_token_succes():
+    """Teste la suppression réussie d'un token."""
+    dao = TokenDao()
+    id_user_test = 1
+    jeton_test = "tok_test_u1"
     
-    mock_conn = MockDBConnection.return_value.connection.__enter__.return_value
-    mock_cursor = mock_conn.cursor.return_value.__enter__.return_value
+    # 1. Vérifier que le token existe
+    token_a_supprimer = dao.trouver_token_par_id(id_user_test)
+    assert token_a_supprimer is not None
+    assert token_a_supprimer.jeton == jeton_test
     
-    mock_cursor.rowcount = 1 
-    
-    token_a_supprimer = Token(id_user=1, jeton="jeton_a_effacer_123", date_expiration=None)
-    
-    resultat = TokenDao().supprimer_token(token_a_supprimer)
-    
+    # 2. Supprimer
+    resultat = dao.supprimer_token(token_a_supprimer)
     assert resultat is True
     
-    mock_cursor.execute.assert_called_once()
+    # 3. Vérifier qu'il n'existe plus
+    token_supprime = dao.trouver_token_par_id(id_user_test)
+    assert token_supprime is None
 
-
-@patch('dao.token_dao.DBConnection')
-def test_supprimer_token_inexistant(MockDBConnection):
-    """Teste la suppression d'un token qui n'existe pas (rowcount == 0)."""
-    
-    mock_conn = MockDBConnection.return_value.connection.__enter__.return_value
-    mock_cursor = mock_conn.cursor.return_value.__enter__.return_value
-    
-    mock_cursor.rowcount = 0 
-    
-    token_inexistant = Token(id_user=99, jeton="jeton_inexistant_XYZ", date_expiration=None)
-    
-    resultat = TokenDao().supprimer_token(token_inexistant)
-    
-    assert resultat is False
-
-
-@patch('dao.token_dao.DBConnection')
-def test_supprimer_token_erreur_bdd(MockDBConnection):
-
-    """Teste le cas où une exception se produit lors de l'exécution (ex: BDD hors service)."""
-    
-    mock_conn = MockDBConnection.return_value.connection.__enter__.return_value
-    mock_cursor = mock_conn.cursor.return_value.__enter__.return_value
-    
-    mock_cursor.execute.side_effect = Exception("Erreur de connexion simulée")
-    
-    token_erreur = Token(id_user=2, jeton="jeton_erreur_BDD", date_expiration=None)
-    
-    resultat = TokenDao().supprimer_token(token_erreur)
-    
-    assert resultat is False
-
-## Tests trouver_id_user_par_token
-
-@patch('dao.token_dao.DBConnection')
-def test_trouver_id_user_par_token_succes(MockDBConnection):
-    """Teste la recherche de l'id_user pour un jeton existant."""
-    
-    id_user_attendu = "u-456-abc"
-    jeton_recherche = "XYZ_TOKEN_123"
-    
-    mock_conn = MockDBConnection.return_value.connection.__enter__.return_value
-    mock_cursor = mock_conn.cursor.return_value.__enter__.return_value
-    
-    mock_cursor.fetchone.return_value = {"id_user": id_user_attendu} 
-    
-    resultat_id_user = TokenDao().trouver_id_user_par_token(jeton_recherche)
-    
-    assert resultat_id_user == id_user_attendu
-
-
-@patch('dao.token_dao.DBConnection')
-def test_trouver_id_user_par_token_echec(MockDBConnection):
-    """Teste la recherche de l'id_user pour un jeton inexistant."""
-    
-    jeton_inexistant = "FAKE_TOKEN_XYZ"
-    
-    mock_conn = MockDBConnection.return_value.connection.__enter__.return_value
-    mock_cursor = mock_conn.cursor.return_value.__enter__.return_value
-    
-    mock_cursor.fetchone.return_value = None 
-    
-    resultat_id_user = TokenDao().trouver_id_user_par_token(jeton_inexistant)
-    
-    assert resultat_id_user is None
-    
-@patch('dao.token_dao.DBConnection')
-def test_trouver_id_user_par_token_erreur_bdd(MockDBConnection):
-    """Teste le cas où une erreur se produit lors de l'accès à la BDD."""
-    
-    # 1. Préparation du mock
-    mock_conn = MockDBConnection.return_value.connection.__enter__.return_value
-    mock_cursor = mock_conn.cursor.return_value.__enter__.return_value
-    
-    # Simuler une exception lors de l'exécution
-    mock_cursor.execute.side_effect = Exception("Erreur de BDD")
-    
-    # 2. Exécution
-    resultat_id_user = TokenDao().trouver_id_user_par_token("jeton_cause_erreur")
-    
-    # 3. Assertions
-    assert resultat_id_user is None # Le DAO gère l'exception et retourne None
-
-## Tests existe_token
-
-@patch('dao.token_dao.DBConnection')
-def test_existe_token_ok(MockDBConnection):
+def test_existe_token_ok():
     """Teste l'existence d'un jeton (trouvé)."""
-    
-    jeton_existant = "EXISTS_TOKEN"
-    
-    mock_conn = MockDBConnection.return_value.connection.__enter__.return_value
-    mock_cursor = mock_conn.cursor.return_value.__enter__.return_value
-    
-    mock_cursor.fetchone.return_value = {"token": jeton_existant} 
-    
-    resultat = TokenDao().existe_token(jeton_existant)
-    
+    dao = TokenDao()
+    jeton_existant = "tok_test_u2" # Existe dans pop_db_test.sql
+    resultat = dao.existe_token(jeton_existant)
     assert resultat is True
 
-
-@patch('dao.token_dao.DBConnection')
-def test_existe_token_ko(MockDBConnection):
+def test_existe_token_ko():
     """Teste l'existence d'un jeton (non trouvé)."""
-    
-    jeton_inexistant = "DOES_NOT_EXIST"
-    
-    mock_conn = MockDBConnection.return_value.connection.__enter__.return_value
-    mock_cursor = mock_conn.cursor.return_value.__enter__.return_value
-    
-    mock_cursor.fetchone.return_value = None 
-    
-    resultat = TokenDao().existe_token(jeton_inexistant)
-    
+    dao = TokenDao()
+    jeton_inexistant = "jeton_inexistant_XYZ"
+    resultat = dao.existe_token(jeton_inexistant)
     assert resultat is False
-    
-@patch('dao.token_dao.DBConnection')
-def test_existe_token_erreur_bdd(MockDBConnection):
-    """Teste le cas où une erreur se produit lors de l'accès à la BDD."""
-    
-    mock_conn = MockDBConnection.return_value.connection.__enter__.return_value
-    mock_cursor = mock_conn.cursor.return_value.__enter__.return_value
-    
-    mock_cursor.execute.side_effect = Exception("Erreur de BDD")
-    
-    resultat = TokenDao().existe_token("jeton_cause_erreur")
-    
-    assert resultat is False 
+
+if __name__ == "__main__":
+    import pytest
+    pytest.main([__file__])
