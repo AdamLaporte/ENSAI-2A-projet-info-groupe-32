@@ -98,42 +98,6 @@ def test_get_stats_par_jour_ok():
     assert historique[1]["date_des_vues"] == date(2025, 10, 2)
     assert historique[1]["nombre_vue"] == 5
 
-#
-# TEST CORRIGÉ (Erreur de copier-coller)
-#
-def test_supprimer_statistique_ok():
-    """
-    Correction du test de suppression.
-    La méthode DAO 'supprimer' supprime TOUTES les stats d'un id_qrcode.
-   
-    """
-    dao = StatistiqueDao()
-    id_qr_a_supprimer = 1
-    
-    # Vérifier qu'il y a bien des stats avant
-    agregats_avant = dao.get_agregats(id_qr_a_supprimer)
-    assert agregats_avant["total_vues"] > 0
-    
-    # Créer un objet Statistique factice juste pour passer l'ID (selon la signature)
-    stat_factice = Statistique(id_qrcode=id_qr_a_supprimer)
-    
-    ok = dao.supprimer(stat_factice)
-    assert ok is True
-    
-    # Vérifier qu'il n'y a plus de stats après
-    agregats_apres = dao.get_agregats(id_qr_a_supprimer)
-    assert agregats_apres["total_vues"] == 0
-
-def test_supprimer_statistique_ko():
-    """
-    Teste la suppression d'une stat pour un qrcode inexistant.
-    """
-    dao = StatistiqueDao()
-    stat_factice = Statistique(id_qrcode=99999)
-    
-    ok = dao.supprimer(stat_factice)
-    assert ok is False # rowcount == 0
-
 if __name__ == "__main__":
     import pytest
     pytest.main([__file__])

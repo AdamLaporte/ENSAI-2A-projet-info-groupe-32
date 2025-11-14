@@ -1,6 +1,6 @@
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 # AJOUTÉ : Imports pour la sécurité, les services et le formulaire de login
 from fastapi import FastAPI, HTTPException, Request, Depends, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -343,7 +343,7 @@ async def scan_qrcode(
             client_host = client_host.split(',')[0].strip()
         else:
             client_host = request.client.host if request.client else "inconnu"
-        date_vue = datetime.utcnow()
+        date_vue = datetime.now(timezone.utc)
         referer = request.headers.get("referer") 
         language = request.headers.get("accept-language")
 
