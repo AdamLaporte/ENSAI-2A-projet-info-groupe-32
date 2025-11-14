@@ -13,25 +13,6 @@ import string
 
 class TokenDao(metaclass=Singleton):
     """Classe contenant les méthodes pour accéder aux Tokens de la base de données"""
-    
-    def generer_jeton(longueur=32):
-        """ Génère un jeton d'authentification sécurisé.
-    
-        Attributs:
-        ----------
-        longueur :int
-            Longueur du jeton (par défaut 32 caractères)
-    
-        Returns:
-        --------
-        str
-            Jeton d'authentification aléatoire
-        """
-        # Utilise secrets pour une génération cryptographiquement sécurisée
-        caracteres = string.ascii_letters + string.digits
-        jeton = ''.join(secrets.choice(caracteres) for _ in range(longueur))
-        return jeton
-
 
     @log
     def creer_token(self, token: Token): 
@@ -144,38 +125,6 @@ class TokenDao(metaclass=Singleton):
         else:
             logging.info(f"Aucun token supprimé pour {token.jeton}.")
         return res == 1
-
-    @log
-    def est_valide_token(self, token: Token) -> bool:
-        """
-        Vérifie si un token est encore valide en termes de date d'expiration.
-        Si le token est expiré, il est supprimé de la base de données.
-
-        Attributs
-        ----------
-        token : Token
-            Le token à vérifier
-
-        Returns
-        -------
-        is_valid : bool
-            True si le token est encore valide
-            False sinon (et supprime le token expiré)
-        """
-        try:
-            if token.date_expiration is None:
-                return False
-
-            now = datetime.now()
-            if token.date_expiration < now:
-                self.supprimer_token(token)
-                logging.info(f"Token {token.jeton} expiré et supprimé de la base")
-                return False
-
-            return True
-        except Exception as e:
-            logging.info(f"Erreur lors de la vérification du token : {e}")
-            return False
 
     @log
     def trouver_token_par_jeton(self, jeton: str) -> Token | None:

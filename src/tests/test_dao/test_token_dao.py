@@ -7,24 +7,6 @@ from datetime import datetime, timedelta
 from business_object.token import Token
 from dao.token_dao import TokenDao
 
-#Tests pour generer_jeton
-
-def test_generer_jeton_longueur():
-    """Test pour vérifier que la longueur du jeton est correcte."""
-    jeton = TokenDao.generer_jeton()
-    assert len(jeton) == 32, f"Le jeton doit avoir 32 caractères, mais il a {len(jeton)}."
-
-def test_generer_jeton_chaine():
-    """Test pour vérifier que le jeton est une chaîne de caractères."""
-    jeton = TokenDao.generer_jeton()
-    assert isinstance(jeton, str), "Le jeton doit être une chaîne de caractères."
-
-def test_generer_jeton_unique():
-    """Test pour vérifier que deux appels successifs génèrent des jetons différents."""
-    jeton1 = TokenDao.generer_jeton()
-    jeton2 = TokenDao.generer_jeton()
-    assert jeton1 != jeton2, "Deux jetons générés consécutivement ne doivent pas être identiques."
-
 # Tests pour creer_token
 
 @patch('dao.token_dao.DBConnection')
@@ -144,48 +126,6 @@ def test_supprimer_token_erreur_bdd(MockDBConnection):
     token_erreur = Token(id_user=2, jeton="jeton_erreur_BDD", date_expiration=None)
     
     resultat = TokenDao().supprimer_token(token_erreur)
-    
-    assert resultat is False
-
-
-## Tests est_valide_token
-
-@patch('dao.token_dao.datetime') 
-@patch.object(TokenDao, 'supprimer_token') 
-def test_est_valide_token_valide(mock_supprimer_token, mock_datetime):
-    """Teste un token qui n'a pas expiré."""
-    
-    now = datetime(2025, 1, 1, 10, 0, 0)
-    mock_datetime.now.return_value = now
-    
-    token_valide = Token(id_user=1, jeton="valid", date_expiration=now + timedelta(hours=1))
-    
-    resultat = TokenDao().est_valide_token(token_valide)
-    
-    assert resultat is True
-    mock_supprimer_token.assert_not_called()
-
-@patch('dao.token_dao.datetime')
-@patch.object(TokenDao, 'supprimer_token')
-def test_est_valide_token_expire(mock_supprimer_token, mock_datetime):
-    """Teste un token expiré. Il devrait être invalide ET supprimé."""
-    
-    now = datetime(2025, 1, 1, 10, 0, 0)
-    mock_datetime.now.return_value = now
-    
-    token_expire = Token(id_user=1, jeton="expired", date_expiration=now - timedelta(seconds=1))
-    
-    resultat = TokenDao().est_valide_token(token_expire)
-    
-    assert resultat is False
-    mock_supprimer_token.assert_called_once_with(token_expire)
-
-def test_est_valide_token_sans_date_expiration():
-    """Teste un token sans date d'expiration (None). Il devrait être invalide."""
-    
-    token_sans_date = Token(id_user=1, jeton="nodate", date_expiration=None)
-    
-    resultat = TokenDao().est_valide_token(token_sans_date)
     
     assert resultat is False
 

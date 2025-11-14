@@ -131,3 +131,9 @@ class TokenService:
         """
         return TokenDao().existe_token(jeton)
 
+    @log
+    def trouver_par_jeton(self, jeton: str) -> Token | None:
+        """Trouve un token par sa chaîne de caractères via le DAO."""
+        # Le service délègue l'appel au DAO
+        return TokenDao().trouver_token_par_jeton(jeton)
+

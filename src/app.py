@@ -116,7 +116,6 @@ credentials_exception = HTTPException(
 
 async def verifier_token_valide(
     token_str: str = Depends(oauth2_scheme), 
-    token_dao: TokenDao = Depends(get_token_dao),
     token_service: TokenService = Depends(get_token_service)
 ) -> int:
     """
@@ -125,7 +124,7 @@ async def verifier_token_valide(
     """
     try:
         # 1. Récupérer l'objet Token complet basé sur la chaîne du token
-        token_obj = token_dao.trouver_token_par_jeton(token_str)
+        token_obj = token_service.trouver_par_jeton(token_str)
         
         # 2. L'objet token est-il valide (existant ET non expiré) ?
         if not token_obj or not token_service.est_valide_token(token_obj): 
@@ -368,7 +367,11 @@ async def scan_qrcode(
         logger.info(f"Scan ENREGISTRÉ (QR suivi) pour QRCode {id_qrcode} depuis {client_host} ({geo_city}, {geo_country})")
 
         # 6. Rediriger l'utilisateur
-        return RedirectResponse(url=qr.url, status_code=307)
+        destination_url = qr.url
+        if not destination_url.startswith("http://") and not destination_url.startswith("https://"):
+            destination_url = f"http://{destination_url}"
+
+        return RedirectResponse(url=destination_url, status_code=307)
     
     except HTTPException:
         raise

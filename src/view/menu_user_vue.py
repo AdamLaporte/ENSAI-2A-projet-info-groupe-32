@@ -2,7 +2,7 @@ from InquirerPy import inquirer
 import os
 import requests  # Ajout pour les requêtes HTTP
 import json      # Ajout pour formater le payload
-from datetime import datetime # Ajout pour parser les timestamps
+from datetime import datetime, timedelta # Ajout pour parser les timestamps
 
 from view.vue_abstraite import VueAbstraite
 from view.session import Session
@@ -52,8 +52,15 @@ class MenuUtilisateurVue(VueAbstraite):
             # Gère le 'Z' (UTC) si présent
             if iso_string.endswith('Z'):
                 iso_string = iso_string[:-1] + '+00:00'
+
+            # 1. Parser la date (qui est en UTC)
             dt = datetime.fromisoformat(iso_string)
-            return dt.strftime("Le %d/%m/%Y à %H:%M:%S")
+
+            # 2. Ajouter 1 heure (comme demandé)
+            dt_modifiee = dt + timedelta(hours=1)
+
+            # 3. Formater la date modifiée
+            return dt_modifiee.strftime("Le %d/%m/%Y à %H:%M:%S")
         except Exception:
             return iso_string
 
