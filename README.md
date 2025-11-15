@@ -11,6 +11,8 @@ Cette application met en œuvre plusieurs concepts clés :
   - La génération de QR codes (statiques et dynamiques)
   - Le suivi statistique (scans, géolocalisation) pour les QR codes dynamiques
 
+Elle constitue une excellente base pour des applications réelles de génération et traçabilité de QR codes.
+
 ## :arrow\_forward: Software and tools
 
   - [Visual Studio Code](https://code.visualstudio.com/)
@@ -33,6 +35,20 @@ Cette application met en œuvre plusieurs concepts clés :
       - Le dossier doit être à la racine de votre Explorateur
       - :warning: Sinon, l'application ne se lancera pas.
 
+
+## Project  architecture
+L'application suit une architecture organisée et maintenable :
+
+src/
+├── business_object/ # Modèles métier (Qrcode, Statistique, Utilisateur, Token…)
+├── dao/ # Accès aux tables PostgreSQL (psycopg2)
+├── service/ # Logique métier (création, suppression, suivi)
+├── utils/ # Génération QR, décorateurs, logs, reset DB
+├── view/ # CLI interactive dans le terminal
+├── app.py # API FastAPI
+└── main.py # Point d’entrée du CLI
+
+
 ## Repository Files Overview
 
 | Item | Description |
@@ -54,6 +70,8 @@ Ce dépôt contient un grand nombre de fichiers de configuration pour paramétre
 | `requirements.txt` | Liste les packages Python requis pour le projet |
 
 Vous aurez également besoin d'un fichier `.env`. Voir ci-dessous.
+
+
 
 ### Folders
 
@@ -235,3 +253,12 @@ Vous pouvez vérifier la progression de ce pipeline sur la page GitHub de votre 
 
   - Exécuter un fichier de test spécifique
     `pytest src/tests/test_service/test_qrcode_service.py`
+
+
+# Équipe projet
+
+Ce projet a été réalisé par les élèves ingénieurs Data Scientists en deuxième année à l'ENSAI que sont:
+
+
+- **KENNE YONTA Lesline Méralda**
+ 
