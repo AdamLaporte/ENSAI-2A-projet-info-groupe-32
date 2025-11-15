@@ -1,10 +1,15 @@
 class Utilisateur:
     """
     Représente un utilisateur avec id numérique et nom utilisateur textuel.
-    Attributs:
-      _id_user: int | None
-      _nom_user: str | None
-      _mdp: str | None
+
+    Attributs privés
+    ----------------
+    id_user : int | None
+        Identifiant numérique de l'utilisateur.
+    nom_user : str | None
+        Nom d'utilisateur (login).
+    mdp : str | None
+        Mot de passe (hashé dans la pratique).
     """
 
     def __init__(self, id_user=None, nom_user=None, mdp=None):
@@ -14,47 +19,57 @@ class Utilisateur:
             raise ValueError("Le nom d'utilisateur doit être une chaîne de caractères")
         if mdp is not None and not isinstance(mdp, str):
             raise ValueError("Le mot de passe doit être une chaîne de caractères")
-        self._id_user = id_user
-        self._nom_user = nom_user
-        self._mdp = mdp
+
+        # --- Attributs privés ---
+        self.__id_user = id_user
+        self.__nom_user = nom_user
+        self.__mdp = mdp
+
+    # ---------------------------------------------------------
+    # Getters / Setters utilisant les attributs privés
+    # ---------------------------------------------------------
 
     @property
     def id_user(self):
-        return self._id_user
+        return self.__id_user
 
     @id_user.setter
     def id_user(self, value):
         if value is not None and not isinstance(value, int):
             raise ValueError("L'identifiant doit être un entier")
-        self._id_user = value
+        self.__id_user = value
 
     @property
     def nom_user(self):
-        return self._nom_user
+        return self.__nom_user
 
     @nom_user.setter
     def nom_user(self, value):
         if value is not None and not isinstance(value, str):
             raise ValueError("Le nom d'utilisateur doit être une chaîne de caractères")
-        self._nom_user = value
+        self.__nom_user = value
 
     @property
     def mdp(self):
-        return self._mdp
+        return self.__mdp
 
     @mdp.setter
     def mdp(self, value):
         if value is not None and not isinstance(value, str):
             raise ValueError("Le mot de passe doit être une chaîne de caractères")
-        self._mdp = value
+        self.__mdp = value
+
+    # ---------------------------------------------------------
+    # Représentation & comparaison
+    # ---------------------------------------------------------
 
     def __str__(self):
-        return f"Utilisateur({self._id_user}, {self._nom_user})"
+        return f"Utilisateur({self.__id_user}, {self.__nom_user})"
 
     def __eq__(self, other):
         if not isinstance(other, Utilisateur):
             return False
         # égalité sur la clé si présente, sinon repli sur nom_user
-        if self._id_user is not None and other._id_user is not None:
-            return self._id_user == other._id_user
-        return self._nom_user == other._nom_user
+        if self.__id_user is not None and other.__id_user is not None:
+            return self.__id_user == other.__id_user
+        return self.__nom_user == other.__nom_user
