@@ -259,10 +259,9 @@ Vous pouvez vérifier la progression de ce pipeline sur la page GitHub de votre 
 
 Ce projet a été réalisé par les élèves ingénieurs Data Scientists en deuxième année à l'ENSAI que sont:
 
-
 - **LAPORTE Adam**
 - **BEIJI Ahmed**
 - **KENNE YONTA Lesline Méralda**
-- **ROUX Louis**
 - **LABINSKY Maytena**
+- **ROUX Louis**
  
