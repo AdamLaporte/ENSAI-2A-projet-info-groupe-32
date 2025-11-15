@@ -23,15 +23,29 @@ def setup_test_environment():
 
 def test_creer_qrc_without_id_returns_qrcode():
     """
-    Vérifie que la création d’un QR code sans identifiant explicite :
-    - insère correctement le QR code en base,
-    - renvoie un objet Qrcode valide,
-    - assigne un id_qrcode auto-généré,
-    - et définit une date_creation.
+    Teste la création d’un QR code sans identifiant fourni.
+
+    Paramètres
+    ----------
+    Aucun paramètre externe. Un objet Qrcode est créé dans le test avec
+    id_qrcode=None.
+
+    Retour
+    ------
+    None
+        Le test vérifie :
+        - que creer_qrc insère correctement le QR code,
+        - que l’objet retourné est un Qrcode valide,
+        - que l’id_qrcode auto-généré est bien défini,
+        - que la date_creation est renseignée.
+
+    Notes
+    -----
+    Le test utilise un id_proprietaire existant en base de tests (id=3).
     """
     dao = QRCodeDao()
     q = Qrcode(
-        id_qrcode=None, 
+        id_qrcode=None,
         url="https://ex.com",
         id_proprietaire=3,
         type_qrcode=True,
@@ -42,18 +56,32 @@ def test_creer_qrc_without_id_returns_qrcode():
     res = dao.creer_qrc(q)
 
     assert isinstance(res, Qrcode)
-    assert res.id_qrcode is not None  # auto-généré en DB
+    assert res.id_qrcode is not None
     assert isinstance(res.date_creation, datetime)
 
 
 def test_trouver_qrc_par_id_qrc_returns_qrcode_when_found():
     """
-    Vérifie que la recherche d’un QR code par son id :
-    - renvoie l’objet Qrcode associé lorsque l’id existe en base.
+    Teste la récupération d’un QR code par son identifiant.
+
+    Paramètres
+    ----------
+    Aucun paramètre externe. Le test commence par créer un QR code
+    pour garantir son existence.
+
+    Retour
+    ------
+    None
+        Le test confirme que :
+        - trouver_qrc_par_id_qrc retourne bien un objet Qrcode,
+        - l’identifiant correspond à celui créé.
+
+    Notes
+    -----
+    Le test crée un QR code afin d'éviter toute dépendance à l'état initial de la base.
     """
     dao = QRCodeDao()
 
-    # Créer d'abord un QR pour être sûr qu'il existe
     created = dao.creer_qrc(Qrcode(id_qrcode=None, url="https://test", id_proprietaire=3))
     found = dao.trouver_qrc_par_id_qrc(created.id_qrcode)
 
@@ -63,8 +91,21 @@ def test_trouver_qrc_par_id_qrc_returns_qrcode_when_found():
 
 def test_trouver_qrc_par_id_qrc_returns_none_when_missing():
     """
-    Vérifie que la recherche d’un QR code inexistant renvoie None.
-    Aucun QR code ne doit être retourné pour un id qui n’est pas en base.
+    Teste la recherche d’un QR code inexistant.
+
+    Paramètres
+    ----------
+    Aucun paramètre externe. Un identifiant très élevé (99999999) est utilisé.
+
+    Retour
+    ------
+    None
+        Le test vérifie que :
+        - la fonction retourne None pour un id non présent en base.
+
+    Notes
+    -----
+    Aucune exception ne doit être levée pour ce cas.
     """
     dao = QRCodeDao()
     res = dao.trouver_qrc_par_id_qrc(99999999)
@@ -73,10 +114,22 @@ def test_trouver_qrc_par_id_qrc_returns_none_when_missing():
 
 def test_modifier_qrc_success():
     """
-    Vérifie que la modification d’un QR code :
-    - fonctionne lorsque l’utilisateur propriétaire correspond,
-    - met bien à jour les champs modifiés,
-    - renvoie un objet Qrcode avec les nouvelles valeurs.
+    Teste la modification réussie d’un QR code existant.
+
+    Paramètres
+    ----------
+    Aucun paramètre externe. Le test crée un QR code avant modification.
+
+    Retour
+    ------
+    None
+        Le test valide que :
+        - la modification renvoie un Qrcode,
+        - les champs modifiés (url) sont correctement mis à jour.
+
+    Notes
+    -----
+    L’utilisateur propriétaire (id_user=3) est utilisé pour autoriser la modification.
     """
     dao = QRCodeDao()
 
@@ -89,8 +142,21 @@ def test_modifier_qrc_success():
 
 def test_modifier_qrc_raises_not_found():
     """
-    Vérifie que tenter de modifier un QR code avec un ID inexistant
-    déclenche l’exception QRCodeNotFoundError.
+    Teste le cas où la modification d’un QR code utilise un id inexistant.
+
+    Paramètres
+    ----------
+    Aucun paramètre externe. Un id arbitraire (123456789) est utilisé.
+
+    Retour
+    ------
+    None
+        Le test confirme que :
+        - modifier_qrc déclenche l’exception QRCodeNotFoundError.
+
+    Notes
+    -----
+    Ce test valide la gestion d’erreur liée à l’absence du QR code ciblé.
     """
     dao = QRCodeDao()
     with pytest.raises(QRCodeNotFoundError):
@@ -99,8 +165,22 @@ def test_modifier_qrc_raises_not_found():
 
 def test_modifier_qrc_raises_unauthorized():
     """
-    Vérifie que la modification d’un QR code par un utilisateur qui n’en est pas
-    le propriétaire déclenche UnauthorizedError.
+    Teste la modification d’un QR code par un utilisateur non propriétaire.
+
+    Paramètres
+    ----------
+    Aucun paramètre externe. Un QR code est créé, puis modifié avec un id_user
+    différent de celui associé au QR code.
+
+    Retour
+    ------
+    None
+        Le test vérifie que :
+        - l’appel à modifier_qrc déclenche UnauthorizedError.
+
+    Notes
+    -----
+    Ce cas confirme la protection contre les modifications non autorisées.
     """
     dao = QRCodeDao()
 
@@ -111,28 +191,56 @@ def test_modifier_qrc_raises_unauthorized():
 
 def test_supprimer_returns_true_or_false():
     """
-    Vérifie que la suppression d’un QR code :
-    - renvoie True si la ligne est réellement supprimée,
-    - renvoie False si aucun QR code ne correspond à l’id fourni.
+    Teste le comportement de la suppression d’un QR code.
+
+    Paramètres
+    ----------
+    Aucun paramètre externe. Deux cas sont testés :
+    - suppression réelle,
+    - suppression sur id inexistant.
+
+    Retour
+    ------
+    None
+        Le test confirme que :
+        - supprimer_qrc renvoie True lorsque la ligne est supprimée,
+        - renvoie False lorsque l’id n’existe pas.
+
+    Notes
+    -----
+    Le test sépare explicitement le cas succès et le cas échec.
     """
     dao = QRCodeDao()
 
-    # cas supprimé
     q1 = dao.creer_qrc(Qrcode(id_qrcode=None, url="https://todel", id_proprietaire=3))
     assert dao.supprimer_qrc(q1.id_qrcode)
 
-    # cas échec (id inexistant)
     assert dao.supprimer_qrc(999999) is False
+
 
 def test_lister_par_proprietaire_ok():
     """
-    Vérifie que la liste des QR codes est correcte pour un utilisateur.
-    La BDD de test (pop_db_test.sql) crée l'utilisateur 'test_u3' (id 3)
-    et lui assigne un QR code.
-   
+    Teste la récupération des QR codes appartenant à un utilisateur existant.
+
+    Paramètres
+    ----------
+    Aucun paramètre externe. Le test utilise l’utilisateur id=3
+    défini dans pop_db_test.sql.
+
+    Retour
+    ------
+    None
+        Le test vérifie :
+        - que la liste contient exactement 1 QR code,
+        - que l’objet retourné est un Qrcode,
+        - que l’URL correspond à la valeur attendue.
+
+    Notes
+    -----
+    La base de tests contient un QR code pour l’utilisateur id=3.
     """
     dao = QRCodeDao()
-    id_user_3 = 3  # Basé sur pop_db_test.sql
+    id_user_3 = 3
     
     resultats = dao.lister_par_proprietaire(id_user_3)
     
@@ -141,10 +249,23 @@ def test_lister_par_proprietaire_ok():
     assert isinstance(resultats[0], Qrcode)
     assert resultats[0].url == "https://t.local/u3/c"
 
+
 def test_lister_par_proprietaire_aucun_resultat():
     """
-    Vérifie qu'une liste vide est retournée pour un utilisateur
-    qui n'a pas de QR codes (ou un ID inexistant).
+    Teste la récupération des QR codes pour un utilisateur n’ayant aucun QR code.
+
+    Paramètres
+    ----------
+    Aucun paramètre externe. Un id inexistant (99999) est utilisé.
+
+    Retour
+    ------
+    None
+        Le test valide que la fonction renvoie une liste vide.
+
+    Notes
+    -----
+    Aucun QR code ne doit être retourné pour un id utilisateur inexistant.
     """
     dao = QRCodeDao()
     id_user_inexistant = 99999
@@ -153,6 +274,7 @@ def test_lister_par_proprietaire_aucun_resultat():
     
     assert isinstance(resultats, list)
     assert len(resultats) == 0
+
 
 
 if __name__ == "__main__":

@@ -133,7 +133,22 @@ class TokenService:
 
     @log
     def trouver_par_jeton(self, jeton: str) -> Token | None:
-        """Trouve un token par sa chaîne de caractères via le DAO."""
+        """
+            Recherche un token à partir de sa valeur textuelle.
+
+            Paramètres
+            ----------
+            jeton : str
+                Chaîne de caractères représentant le jeton d’authentification
+                ou de session à retrouver.
+
+            Retour
+            ------
+            Token | None
+                - Renvoie l’objet Token correspondant si le jeton existe en base.
+                - Renvoie None si aucun token ne correspond à la valeur fournie.
+
+        """
         # Le service délègue l'appel au DAO
         return TokenDao().trouver_token_par_jeton(jeton)
 

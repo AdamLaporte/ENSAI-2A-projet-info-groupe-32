@@ -12,9 +12,22 @@ class UtilisateurDao(metaclass=Singleton):
     @log
     def creer_user(self, utilisateur: Utilisateur) -> bool:
         """
-        Création d'un utilisateur.
-        Attend utilisateur.nom_user (str) et utilisateur.mdp (str) remplis.
-        Renseigne utilisateur.id_user depuis RETURNING.
+        Crée un nouvel utilisateur en base.
+
+        Paramètres
+        ----------
+        utilisateur : Utilisateur
+            Objet métier contenant :
+            - nom_user : str (login)
+            - mdp : str (mot de passe déjà hashé)
+            L’attribut id_user doit être None avant insertion.
+
+        Retour
+        ------
+        bool
+            - True si l’insertion s’est déroulée correctement (id_user rempli).
+            - False en cas d’erreur ou d’échec d’insertion.
+
         """
         res = None
         try:
@@ -43,7 +56,25 @@ class UtilisateurDao(metaclass=Singleton):
 
     @log
     def trouver_par_id_user(self, id_user: int) -> Utilisateur | None:
-        """Trouver un utilisateur par id_user (entier)."""
+        """
+        Recherche un utilisateur à partir de son identifiant unique.
+
+        Paramètres
+        ----------
+        id_user : int
+            Identifiant numérique du compte utilisateur recherché.
+
+        Retour
+        ------
+        Utilisateur | None
+            - L’objet utilisateur correspondant si trouvé.
+            - None si aucun utilisateur ne correspond à l’identifiant.
+
+        Notes
+        -----
+        - Supporte dict ou tuple selon le curseur.
+        - Lève l’exception SQL en cas d’erreur (logging + raise).
+        """
         try:
             with DBConnection().connection as connection:
                 with connection.cursor() as cursor:
@@ -71,7 +102,22 @@ class UtilisateurDao(metaclass=Singleton):
 
     @log
     def trouver_par_nom_user(self, nom_user: str) -> Utilisateur | None:
-        """Trouver un utilisateur par nom_user (login)."""
+        """
+        Recherche un utilisateur par son nom d’utilisateur (login).
+
+        Paramètres
+        ----------
+        nom_user : str
+            Login de l’utilisateur à rechercher.
+
+        Retour
+        ------
+        Utilisateur | None
+            - L’objet utilisateur si trouvé.
+            - None si aucun utilisateur ne correspond.
+
+        
+        """
         try:
             with DBConnection().connection as connection:
                 with connection.cursor() as cursor:
@@ -99,7 +145,20 @@ class UtilisateurDao(metaclass=Singleton):
 
     @log
     def lister_tous(self) -> list[Utilisateur]:
-        """Lister tous les utilisateurs."""
+        """
+        Liste l’ensemble des utilisateurs enregistrés en base.
+
+        Paramètres
+        ----------
+        Aucun
+
+        Retour
+        ------
+        list[Utilisateur]
+            Liste d’objets Utilisateur, triée par id_user croissant.
+            Liste vide si aucun utilisateur n’existe.
+
+        """
         try:
             with DBConnection().connection as connection:
                 with connection.cursor() as cursor:
@@ -137,9 +196,27 @@ class UtilisateurDao(metaclass=Singleton):
     @log
     def modifier_user(self, utilisateur: Utilisateur) -> bool:
         """
-        Modification d'un utilisateur.
-        Met à jour nom_user et/ou mdp selon ce qui est fourni.
-        Ici, on met à jour les deux colonnes avec les valeurs présentes.
+        Modifie les informations d’un utilisateur existant.
+
+        Paramètres
+        ----------
+        utilisateur : Utilisateur
+            Objet contenant :
+            - id_user : int (obligatoire)
+            - nom_user : str (nouvelle valeur)
+            - mdp : str (nouveau mot de passe déjà hashé)
+
+        Retour
+        ------
+        bool
+            - True si exactement une ligne a été modifiée.
+            - False sinon.
+
+        Notes
+        -----
+        - Met à jour les colonnes nom_user et mdp.
+        - Ne modifie rien si id_user est invalide.
+        - Toute exception SQL est journalisée.
         """
         res = 0
         try:
@@ -165,7 +242,21 @@ class UtilisateurDao(metaclass=Singleton):
 
     @log
     def supprimer(self, utilisateur: Utilisateur) -> bool:
-        """Supprimer un utilisateur par id_user."""
+        """
+        Supprime un utilisateur selon son identifiant.
+
+        Paramètres
+        ----------
+        utilisateur : Utilisateur
+            Objet contenant au minimum l’attribut id_user.
+
+        Retour
+        ------
+        bool
+            - True si une ligne a été supprimée.
+            - False si aucun utilisateur n’a été trouvé.
+
+        """
         try:
             with DBConnection().connection as connection:
                 with connection.cursor() as cursor:
@@ -185,7 +276,21 @@ class UtilisateurDao(metaclass=Singleton):
     @log
     def se_connecter(self, nom_user: str, mdp_hash: str) -> Utilisateur | None:
         """
-        Connexion par nom_user + mot de passe hashé (déjà hashé en service).
+        Authentifie un utilisateur via son nom + mot de passe hashé.
+
+        Paramètres
+        ----------
+        nom_user : str
+            Login fourni par l’utilisateur.
+        mdp_hash : str
+            Mot de passe hashé, généré côté service.
+
+        Retour
+        ------
+        Utilisateur | None
+            - L’utilisateur authentifié si les identifiants concordent.
+            - None sinon ou en cas d’erreur.
+
         """
         try:
             with DBConnection().connection as connection:

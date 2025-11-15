@@ -128,9 +128,22 @@ class TokenDao(metaclass=Singleton):
 
     @log
     def trouver_token_par_jeton(self, jeton: str) -> Token | None:
-        """Trouver l'objet Token complet associé à un jeton
-        ...
         """
+        Recherche un token à partir de sa valeur textuelle.
+
+        Paramètres
+        ----------
+        jeton : str
+            Chaîne de caractères représentant le jeton d’authentification
+            à rechercher dans la base de données.
+
+        Retour
+        ------
+        Token | None
+            - Renvoie un objet `Token` complet si le jeton existe en base.
+            - Renvoie None si aucun token ne correspond ou en cas d’erreur.
+
+            """
         try:
             with DBConnection().connection as connection:
                 with connection.cursor() as cursor:
@@ -153,6 +166,7 @@ class TokenDao(metaclass=Singleton):
                 date_expiration=res["date_expiration"],
             )
         return None
+
     @log
     def existe_token(self, jeton: str) -> bool:
         """ Vérifie si un token existe dans la base de données
