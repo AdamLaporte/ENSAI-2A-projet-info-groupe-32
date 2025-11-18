@@ -7,11 +7,6 @@ import yaml
 def initialiser_logs(nom):
     """Initialiser les logs à partir du fichier de config"""
 
-    # print current working directory
-    # print(os.getcwd())
-    # os.chdir('ENSAI-2A-projet-info-template')
-
-    # Création du dossier logs à la racine si non existant
     os.makedirs("logs", exist_ok=True)
 
     stream = open("logging_config.yml", encoding="utf-8")

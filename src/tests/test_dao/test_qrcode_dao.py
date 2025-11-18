@@ -1,6 +1,4 @@
-import os
 import pytest
-from unittest.mock import MagicMock, patch
 from datetime import datetime
 
 
@@ -82,7 +80,9 @@ def test_trouver_qrc_par_id_qrc_returns_qrcode_when_found():
     """
     dao = QRCodeDao()
 
-    created = dao.creer_qrc(Qrcode(id_qrcode=None, url="https://test", id_proprietaire=3))
+    created = dao.creer_qrc(
+        Qrcode(id_qrcode=None, url="https://test", id_proprietaire=3)
+    )
     found = dao.trouver_qrc_par_id_qrc(created.id_qrcode)
 
     assert isinstance(found, Qrcode)
@@ -241,9 +241,9 @@ def test_lister_par_proprietaire_ok():
     """
     dao = QRCodeDao()
     id_user_3 = 3
-    
+
     resultats = dao.lister_par_proprietaire(id_user_3)
-    
+
     assert isinstance(resultats, list)
     assert len(resultats) == 1
     assert isinstance(resultats[0], Qrcode)
@@ -269,14 +269,14 @@ def test_lister_par_proprietaire_aucun_resultat():
     """
     dao = QRCodeDao()
     id_user_inexistant = 99999
-    
+
     resultats = dao.lister_par_proprietaire(id_user_inexistant)
-    
+
     assert isinstance(resultats, list)
     assert len(resultats) == 0
 
 
-
 if __name__ == "__main__":
     import pytest
+
     pytest.main([__file__])

@@ -9,7 +9,7 @@ from view.session import Session
 from service.utilisateur_service import UtilisateurService
 
 # AJOUT : Définir l'URL de l'API
-API_BASE_URL = os.getenv("BASE_API_URL", "http://127.0.0.1:5000")
+API_BASE_URL = os.getenv("BASE_URL", "http://127.0.0.1:5000")
 
 
 class ConnexionVue(VueAbstraite):

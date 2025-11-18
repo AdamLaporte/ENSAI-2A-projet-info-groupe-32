@@ -1,5 +1,4 @@
 import logging
-
 from utils.singleton import Singleton
 from utils.log_decorator import log
 from dao.db_connection import DBConnection
@@ -46,8 +45,9 @@ class UtilisateurDao(metaclass=Singleton):
                     )
                     row = cursor.fetchone()
                     if row:
-                        # selon le cursor_factory (DictCursor ou non)
-                        utilisateur.id_user = row["id_user"] if isinstance(row, dict) else row[0]
+                        utilisateur.id_user = (
+                            row["id_user"] if isinstance(row, dict) else row[0]
+                        )
                         res = True
         except Exception as e:
             logging.info(e)
@@ -116,7 +116,7 @@ class UtilisateurDao(metaclass=Singleton):
             - L’objet utilisateur si trouvé.
             - None si aucun utilisateur ne correspond.
 
-        
+
         """
         try:
             with DBConnection().connection as connection:

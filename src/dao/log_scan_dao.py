@@ -1,80 +1,95 @@
-# src/dao/log_scan_dao.py
 import logging
-from utils.singleton import Singleton
-from utils.log_decorator import log
-from dao.db_connection import DBConnection
-from business_object.log_scan import LogScan
-from typing import List, Dict, Any
-from typing import Optional
+from typing import Any, Dict, List
 
+from business_object.log_scan import LogScan
+from dao.db_connection import DBConnection
+from utils.log_decorator import log
+from utils.singleton import Singleton
 
 logger = logging.getLogger(__name__)
+
 
 class LogScanDao(metaclass=Singleton):
     """DAO pour la table logs_scan."""
 
     @log
-    def enregistrer_log(
-    self,
-    id_qrcode: int,
-    client_host: Optional[str] = None,
-    user_agent: Optional[str] = None,
-    referer: Optional[str] = None,
-    accept_language: Optional[str] = None,
-    geo_country: Optional[str] = None,
-    geo_region: Optional[str] = None,
-    geo_city: Optional[str] = None
-) -> Optional[LogScan]:
+    def creer_log(self, log: LogScan) -> bool:
         """
-        Enregistre un log de scan pour un QR code.
+        Insère un nouveau log de scan dans la base de données.
+        """
+        try:
+            with DBConnection().connection as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        INSERT INTO logs_scan (
+                            id_qrcode, client_host, user_agent, referer, 
+                            accept_language, geo_country, geo_region, geo_city, date_scan
+                        )
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                        RETURNING id_scan, date_scan;
+                        """,
+                        (
+                            log.id_qrcode,
+                            log.client_host,
+                            log.user_agent,
+                            log.referer,
+                            log.accept_language,
+                            log.geo_country,
+                            log.geo_region,
+                            log.geo_city,
+                        ),
+                    )
+                    res = cur.fetchone()
+                    if res:
+                        if isinstance(res, dict):
+                            log.id_scan = res["id_scan"]
+                            log.date_scan = res["date_scan"]
+                        else:
+                            log.id_scan = res[0]
+                            log.date_scan = res[1]
+                        return True
+            return False
+
+        except Exception as e:
+            logger.exception(f"Erreur DAO lors de la création du log : {e}")
+            return False
+
+    @log
+    def get_scans_recents(self, id_qrcode: int, limit: int = 50) -> List[Dict[str, Any]]:
+        """
+        Récupère les derniers scans pour un QR code donné.
 
         Paramètres
         ----------
         id_qrcode : int
-            Identifiant du QR code scanné.
-        client_host : str, optionnel
-            Adresse IP du client ayant effectué le scan.
-        user_agent : str, optionnel
-            User-Agent du client (navigateur ou application).
-        referer : str, optionnel
-            URL de provenance du scan.
-        accept_language : str, optionnel
-            Chaîne indiquant la langue préférée du client.
-        geo_country : str, optionnel
-            Pays déduit de la géolocalisation.
-        geo_region : str, optionnel
-            Région déduite de la géolocalisation.
-        geo_city : str, optionnel
-            Ville déduite de la géolocalisation.
+            L'identifiant du QR code.
+        limit : int
+            Nombre maximum de logs à retourner (par défaut 50).
 
         Retour
         ------
-        Optional[LogScan]
-            - Renvoie l’objet LogScan créé et enregistré en base si succès.
-            - Renvoie None si l’enregistrement échoue ou en cas d’erreur.
-
-        Notes
-        -----
-        - L’objet LogScan est construit dans le service, puis transmis au DAO.
-        - Toute exception interne est interceptée et journalisée ; la méthode
-        renvoie alors None pour ne jamais interrompre le flux d’exécution.
+        List[Dict]
+            Liste de dictionnaires représentant les logs.
         """
         try:
-            log_scan = LogScan(
-                id_qrcode=id_qrcode,
-                client_host=client_host,
-                user_agent=user_agent,
-                referer=referer,
-                accept_language=accept_language,
-                geo_country=geo_country,
-                geo_region=geo_region,
-                geo_city=geo_city
-            )
-            
-            success = self.dao.creer_log(log_scan)
-            
-            return log_scan if success else None
-            
+            with DBConnection().connection as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        SELECT client_host, user_agent, date_scan, referer, 
+                               accept_language, geo_country, geo_region, geo_city
+                        FROM logs_scan
+                        WHERE id_qrcode = %s
+                        ORDER BY date_scan DESC
+                        LIMIT %s;
+                        """,
+                        (id_qrcode, limit),
+                    )
+                    rows = cur.fetchall()
+
+            return rows if rows else []
+
         except Exception as e:
-            logging.exception(f"Erreur dans LogScanService : {e}")
-            return None
+            logger.exception(f"Erreur DAO lors de la récupération des scans récents : {e}")
+            return []

@@ -9,11 +9,13 @@ logger = logging.getLogger(__name__)
 
 class QRCodeNotFoundError(Exception):
     """Erreur levée lorsqu’un QR code est introuvable."""
+
     pass
 
 
 class UnauthorizedError(Exception):
     """Erreur levée lorsqu’un utilisateur tente de modifier un QR code qui ne lui appartient pas."""
+
     pass
 
 
@@ -31,29 +33,29 @@ class QRCodeDao:
     @log
     def creer_qrc(self, qrcode: Qrcode) -> Optional[Qrcode]:
         """
-    Insère un QR code dans la base et retourne l’objet enrichi.
+        Insère un QR code dans la base et retourne l’objet enrichi.
 
-    Paramètres
-    ----------
-    qrcode : Qrcode
-        Objet métier à insérer, pouvant contenir id_qrcode=None pour
-        laisser la base générer l’identifiant. Les champs url,
-        id_proprietaire, type_qrcode, couleur, logo doivent être renseignés.
+        Paramètres
+        ----------
+        qrcode : Qrcode
+            Objet métier à insérer, pouvant contenir id_qrcode=None pour
+            laisser la base générer l’identifiant. Les champs url,
+            id_proprietaire, type_qrcode, couleur, logo doivent être renseignés.
 
-    Retour
-    ------
-    Optional[Qrcode]
-        - Renvoie l’objet Qrcode mis à jour avec :
-          * id_qrcode assigné par la base,
-          * date_creation renseignée.
-        - Renvoie None si l’insertion échoue.
+        Retour
+        ------
+        Optional[Qrcode]
+            - Renvoie l’objet Qrcode mis à jour avec :
+              * id_qrcode assigné par la base,
+              * date_creation renseignée.
+            - Renvoie None si l’insertion échoue.
 
-    Notes
-    -----
-    - Gère les deux cas : insertion avec id explicite ou id généré.
-    - Supporte RealDictCursor ou un tuple (conversion automatique).
-    - Toute erreur est journalisée via logger.exception.
-    """
+        Notes
+        -----
+        - Gère les deux cas : insertion avec id explicite ou id généré.
+        - Supporte RealDictCursor ou un tuple (conversion automatique).
+        - Toute erreur est journalisée via logger.exception.
+        """
         try:
             with self._db.connection as conn:
                 with conn.cursor() as cur:
@@ -116,80 +118,46 @@ class QRCodeDao:
     @log
     def supprimer_qrc(self, id_qrcode: int) -> bool:
         """
-    Supprime un QR code en base selon son identifiant.
+        Supprime un QR code en base selon son identifiant.
 
-    Paramètres
-    ----------
-    id_qrcode : int
-        Identifiant du QR code à supprimer.
+        Paramètres
+        ----------
+        id_qrcode : int
+            Identifiant du QR code à supprimer.
 
-    Retour
-    ------
-    bool
-        - True si au moins une ligne a été supprimée.
-        - False si aucun QR code ne correspond à l’identifiant.
+        Retour
+        ------
+        bool
+            - True si au moins une ligne a été supprimée.
+            - False si aucun QR code ne correspond à l’identifiant.
 
-    Notes
-    -----
-    - La suppression est silencieuse même si l’ID est inexistant.
-    - Les erreurs SQL sont journalisées.
-    """
+        Notes
+        -----
+        - La suppression est silencieuse même si l’ID est inexistant.
+        - Les erreurs SQL sont journalisées.
+        """
         try:
             with self._db.connection as conn:
                 with conn.cursor() as cur:
-                    cur.execute("DELETE FROM qrcode WHERE id_qrcode = %s;", (id_qrcode,))
+                    cur.execute(
+                        "DELETE FROM qrcode WHERE id_qrcode = %s;", (id_qrcode,)
+                    )
                     deleted = cur.rowcount > 0
                 conn.commit()
 
             if deleted:
                 logger.info(f"QR code {id_qrcode} supprimé avec succès.")
             else:
-                logger.warning(f"Tentative de suppression d’un QR code inexistant : {id_qrcode}.")
+                logger.warning(
+                    f"Tentative de suppression d’un QR code inexistant : {id_qrcode}."
+                )
             return deleted
 
         except Exception as e:
-            logger.exception(f"Erreur lors de la suppression du QR code {id_qrcode} : {e}")
+            logger.exception(
+                f"Erreur lors de la suppression du QR code {id_qrcode} : {e}"
+            )
             return False
-    
-    
-    @log
-    def trouver_qrc_par_id_qrc(self, id_qrcode: int) -> Optional[Qrcode]:
-            """
-            Recherche un QR code par son identifiant unique.
-
-            Paramètres
-            ----------
-            id_qrcode : int
-                Identifiant du QR code à rechercher.
-
-            Retour
-            ------
-            Optional[Qrcode]
-                - L’objet Qrcode correspondant si trouvé.
-                - None si aucun résultat.
-
-            Notes
-            -----
-            - Supporte les curseurs renvoyant dict ou tuple.
-            - Convertit automatiquement le résultat en objet métier Qrcode.
-            - Journalise un avertissement si l’ID n’existe pas.
-            """
-            try:
-                with self._db.connection as conn:
-                    with conn.cursor() as cur:
-                        cur.execute("DELETE FROM qrcode WHERE id_qrcode = %s;", (id_qrcode,))
-                        deleted = cur.rowcount > 0
-                    conn.commit()
-
-                if deleted:
-                    logger.info(f"QR code {id_qrcode} supprimé avec succès.")
-                else:
-                    logger.warning(f"Tentative de suppression d’un QR code inexistant : {id_qrcode}.")
-                return deleted
-
-            except Exception as e:
-                logger.exception(f"Erreur lors de la suppression du QR code {id_qrcode} : {e}")
-                return False
 
     def trouver_qrc_par_id_qrc(self, id_qrcode: int) -> Optional[Qrcode]:
         """
@@ -206,7 +174,7 @@ class QRCodeDao:
             - L’objet Qrcode correspondant si trouvé.
             - None si aucun résultat.
 
-    """
+        """
         try:
             with self._db.connection as conn:
                 with conn.cursor() as cur:
@@ -241,37 +209,39 @@ class QRCodeDao:
             )
 
         except Exception as e:
-            logger.exception(f"Erreur lors de la recherche du QR code {id_qrcode} : {e}")
+            logger.exception(
+                f"Erreur lors de la recherche du QR code {id_qrcode} : {e}"
+            )
             return None
 
     @log
     def lister_par_proprietaire(self, id_user: int) -> List[Qrcode]:
         """
-    Met à jour les champs d’un QR code existant.
+        Met à jour les champs d’un QR code existant.
 
-    Paramètres
-    ----------
-    id_qrcode : int
-        Identifiant du QR code à modifier.
-    id_user : int
-        Identifiant du propriétaire (vérification d’autorisation).
-    url : str, optionnel
-        Nouvelle URL finale si fournie.
-    type_qrcode : bool, optionnel
-        Nouveau type (True dynamique, False statique) si fourni.
-    couleur : str, optionnel
-        Nouvelle couleur du QR code.
-    logo : str, optionnel
-        Nouveau logo à associer.
+        Paramètres
+        ----------
+        id_qrcode : int
+            Identifiant du QR code à modifier.
+        id_user : int
+            Identifiant du propriétaire (vérification d’autorisation).
+        url : str, optionnel
+            Nouvelle URL finale si fournie.
+        type_qrcode : bool, optionnel
+            Nouveau type (True dynamique, False statique) si fourni.
+        couleur : str, optionnel
+            Nouvelle couleur du QR code.
+        logo : str, optionnel
+            Nouveau logo à associer.
 
-    Retour
-    ------
-    Optional[Qrcode]
-        - L’objet mis à jour si la modification réussit.
-        - None en cas d’erreur non prévue.
+        Retour
+        ------
+        Optional[Qrcode]
+            - L’objet mis à jour si la modification réussit.
+            - None en cas d’erreur non prévue.
 
-   
-    """
+
+        """
         try:
             with self._db.connection as conn:
                 with conn.cursor() as cur:
@@ -303,11 +273,15 @@ class QRCodeDao:
                         logo=r["logo"],
                     )
                 )
-            logger.info(f"{len(qrcodes)} QR codes récupérés pour l’utilisateur {id_user}.")
+            logger.info(
+                f"{len(qrcodes)} QR codes récupérés pour l’utilisateur {id_user}."
+            )
             return qrcodes
 
         except Exception as e:
-            logger.exception(f"Erreur lors du listing des QR codes pour user {id_user} : {e}")
+            logger.exception(
+                f"Erreur lors du listing des QR codes pour user {id_user} : {e}"
+            )
             return []
 
     @log
@@ -320,40 +294,39 @@ class QRCodeDao:
         couleur: Optional[str] = None,
         logo: Optional[str] = None,
     ) -> Optional[Qrcode]:
-        
         """
-            Met à jour les champs d’un QR code existant.
+        Met à jour les champs d’un QR code existant.
 
-            Paramètres
-            ----------
-            id_qrcode : int
-                Identifiant du QR code à modifier.
-            id_user : int
-                Identifiant du propriétaire (vérification d’autorisation).
-            url : str, optionnel
-                Nouvelle URL finale si fournie.
-            type_qrcode : bool, optionnel
-                Nouveau type (True dynamique, False statique) si fourni.
-            couleur : str, optionnel
-                Nouvelle couleur du QR code.
-            logo : str, optionnel
-                Nouveau logo à associer.
+        Paramètres
+        ----------
+        id_qrcode : int
+            Identifiant du QR code à modifier.
+        id_user : int
+            Identifiant du propriétaire (vérification d’autorisation).
+        url : str, optionnel
+            Nouvelle URL finale si fournie.
+        type_qrcode : bool, optionnel
+            Nouveau type (True dynamique, False statique) si fourni.
+        couleur : str, optionnel
+            Nouvelle couleur du QR code.
+        logo : str, optionnel
+            Nouveau logo à associer.
 
-            Retour
-            ------
-            Optional[Qrcode]
-                - L’objet mis à jour si la modification réussit.
-                - None en cas d’erreur non prévue.
+        Retour
+        ------
+        Optional[Qrcode]
+            - L’objet mis à jour si la modification réussit.
+            - None en cas d’erreur non prévue.
 
-            Notes
-            -----
-            - Vérifie l’existence du QR code : lève QRCodeNotFoundError si absent.
-            - Vérifie les droits : lève UnauthorizedError si l’utilisateur n’est pas propriétaire.
-            - Utilise COALESCE pour ne modifier que les champs explicitement fournis.
-            - Convertit automatiquement tuple → dict le cas échéant.
-            - Journalise tout échec via logger.exception.
+        Notes
+        -----
+        - Vérifie l’existence du QR code : lève QRCodeNotFoundError si absent.
+        - Vérifie les droits : lève UnauthorizedError si l’utilisateur n’est pas propriétaire.
+        - Utilise COALESCE pour ne modifier que les champs explicitement fournis.
+        - Convertit automatiquement tuple → dict le cas échéant.
+        - Journalise tout échec via logger.exception.
         """
-    
+
         try:
             with self._db.connection as conn:
                 with conn.cursor() as cur:
@@ -365,9 +338,13 @@ class QRCodeDao:
                     row = cur.fetchone()
                     if not row:
                         raise QRCodeNotFoundError(f"QR code {id_qrcode} introuvable.")
-                    owner_id = row["id_proprietaire"] if isinstance(row, dict) else row[0]
+                    owner_id = (
+                        row["id_proprietaire"] if isinstance(row, dict) else row[0]
+                    )
                     if owner_id != int(id_user):
-                        raise UnauthorizedError("Vous ne pouvez modifier que vos propres QR codes.")
+                        raise UnauthorizedError(
+                            "Vous ne pouvez modifier que vos propres QR codes."
+                        )
 
                     # Mise à jour
                     cur.execute(
@@ -386,14 +363,18 @@ class QRCodeDao:
                 conn.commit()
 
             if not updated:
-                raise QRCodeNotFoundError(f"QR code {id_qrcode} introuvable après mise à jour.")
+                raise QRCodeNotFoundError(
+                    f"QR code {id_qrcode} introuvable après mise à jour."
+                )
 
             # Support tuple ou dict
             if not isinstance(updated, dict):
                 colnames = [desc[0] for desc in cur.description]
                 updated = dict(zip(colnames, updated))
 
-            logger.info(f"QR code {id_qrcode} mis à jour avec succès par user {id_user}.")
+            logger.info(
+                f"QR code {id_qrcode} mis à jour avec succès par user {id_user}."
+            )
             return Qrcode(
                 id_qrcode=updated["id_qrcode"],
                 url=updated["url"],
@@ -411,5 +392,7 @@ class QRCodeDao:
             logger.warning(str(e))
             raise
         except Exception as e:
-            logger.exception(f"Erreur lors de la mise à jour du QR code {id_qrcode} : {e}")
+            logger.exception(
+                f"Erreur lors de la mise à jour du QR code {id_qrcode} : {e}"
+            )
             return None

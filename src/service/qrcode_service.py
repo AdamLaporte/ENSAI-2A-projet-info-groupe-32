@@ -1,24 +1,23 @@
 from typing import List, Optional
-from datetime import datetime
 from business_object.qr_code import Qrcode  # ta classe métier
 from dao.qrcode_dao import QRCodeDao
 from utils.qrcode_generator import generate_and_save_qr_png, filepath_to_public_url
 import os
 from utils.log_decorator import log
 
-# assume env/config
 QR_OUTPUT_DIR = os.getenv("QRCODE_OUTPUT_DIR", "static/qrcodes")
-# Lit l'URL de scan depuis l'env (utilisée si type_qrcode is True)
 SCAN_BASE = os.getenv("SCAN_BASE_URL")
 
 
 class QRCodeNotFoundError(Exception):
     """Erreur levée si le QR code n'existe pas."""
+
     pass
 
 
 class UnauthorizedError(Exception):
     """Erreur levée si l'utilisateur n'est pas le propriétaire du QR code."""
+
     pass
 
 
@@ -86,7 +85,9 @@ class QRCodeService:
 
         if type_qrcode is True:
             if not SCAN_BASE:
-                raise RuntimeError("SCAN_BASE_URL n'est pas configuré dans .env pour un QR code suivi.")
+                raise RuntimeError(
+                    "SCAN_BASE_URL n'est pas configuré dans .env pour un QR code suivi."
+                )
             scan_url = f"{SCAN_BASE.rstrip('/')}/{created_qr.id_qrcode}"
             payload_url = scan_url
         else:
@@ -107,7 +108,6 @@ class QRCodeService:
         created_qr._scan_url = scan_url
 
         return created_qr
-
 
     def trouver_qrc_par_id_user(self, id_user: str) -> List[Qrcode]:
         """
@@ -133,7 +133,6 @@ class QRCodeService:
         except ValueError:
             return []
         return self.dao.lister_par_proprietaire(user_id_int)
-
 
     def supprimer_qrc(self, id_qrcode: int, id_user: int) -> bool:
         """
@@ -171,10 +170,11 @@ class QRCodeService:
             if os.path.exists(file_path):
                 os.remove(file_path)
         except Exception as e:
-            print(f"Avertissement: n'a pas pu supprimer le fichier image {file_path}: {e}")
+            print(
+                f"Avertissement: n'a pas pu supprimer le fichier image {file_path}: {e}"
+            )
 
         return self.dao.supprimer_qrc(id_qrcode)
-
 
     def trouver_qrc_par_id(self, id_qrcode: int) -> Optional[Qrcode]:
         """
@@ -196,7 +196,6 @@ class QRCodeService:
         """
         return self.dao.trouver_qrc_par_id_qrc(id_qrcode)
 
-
     def modifier_qrc(
         self,
         id_qrcode: int,
@@ -204,7 +203,7 @@ class QRCodeService:
         url: Optional[str] = None,
         type_qrcode: Optional[bool] = None,
         couleur: Optional[str] = None,
-        logo: Optional[str] = None
+        logo: Optional[str] = None,
     ) -> Qrcode:
         """
         Modifie un QR code existant après vérification du propriétaire.
@@ -259,13 +258,13 @@ class QRCodeService:
             if qr.type_qrcode is True:
                 regenerate_image = True
                 payload_url_a_encoder = nouvelle_url
-            elif (url is not None and url != qr.url):
+            elif url is not None and url != qr.url:
                 regenerate_image = True
                 payload_url_a_encoder = nouvelle_url
-            elif (couleur is not None and couleur != qr.couleur):
+            elif couleur is not None and couleur != qr.couleur:
                 regenerate_image = True
                 payload_url_a_encoder = nouvelle_url
-            elif (logo is not None and logo != qr.logo):
+            elif logo is not None and logo != qr.logo:
                 regenerate_image = True
                 payload_url_a_encoder = nouvelle_url
 
@@ -275,10 +274,10 @@ class QRCodeService:
             if qr.type_qrcode is False:
                 regenerate_image = True
                 payload_url_a_encoder = scan_url
-            elif (couleur is not None and couleur != qr.couleur):
+            elif couleur is not None and couleur != qr.couleur:
                 regenerate_image = True
                 payload_url_a_encoder = scan_url
-            elif (logo is not None and logo != qr.logo):
+            elif logo is not None and logo != qr.logo:
                 regenerate_image = True
                 payload_url_a_encoder = scan_url
 
@@ -302,5 +301,5 @@ class QRCodeService:
             url=url,
             type_qrcode=type_qrcode,
             couleur=couleur,
-            logo=logo
+            logo=logo,
         )

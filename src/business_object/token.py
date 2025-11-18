@@ -15,18 +15,24 @@ class Token:
         date d'expiration du jeton (privé)
     """
 
-    def __init__(self, id_user: int, jeton: str, date_expiration : datetime ):
+    def __init__(self, id_user: int, jeton: str, date_expiration: datetime):
         """Constructeur"""
-        if not isinstance(id_user,int) and id_user is not None  :
-            raise ValueError("L'identifiant de l'utilisateur 'id_user' doit être un entier.")
-        if not isinstance(jeton, str) and jeton is not None  :
-            raise ValueError("Le jeton d'authentification 'jeton' doit être une chaine de caractères.")
-        if not isinstance(date_expiration, datetime) and date_expiration is not None :
-             raise ValueError("La date d'expiration du jeton 'date_expiration' doit être une date au format datetime.")
+        if not isinstance(id_user, int) and id_user is not None:
+            raise ValueError(
+                "L'identifiant de l'utilisateur 'id_user' doit être un entier."
+            )
+        if not isinstance(jeton, str) and jeton is not None:
+            raise ValueError(
+                "Le jeton d'authentification 'jeton' doit être une chaine de caractères."
+            )
+        if not isinstance(date_expiration, datetime) and date_expiration is not None:
+            raise ValueError(
+                "La date d'expiration du jeton 'date_expiration' doit être une date au format datetime."
+            )
 
         self.__id_user = id_user
         self.__jeton = jeton
-        self.__date_expiration = date_expiration  
+        self.__date_expiration = date_expiration
 
     @property
     def id_user(self):
@@ -45,7 +51,9 @@ class Token:
     @jeton.setter
     def jeton(self, value):
         if value is not None and not isinstance(value, str):
-            raise ValueError("Le jeton d'authentification doit être une chaîne de caractères.")
+            raise ValueError(
+                "Le jeton d'authentification doit être une chaîne de caractères."
+            )
         self.__jeton = value
 
     @property
@@ -61,8 +69,7 @@ class Token:
     def __eq__(self, other):
         if not isinstance(other, Token):
             return False
-        return self.__id_user == other.__id_user and self.jeton == other.__jeton #ici je ne sais
-        #pas si on doit comparer les deux ou que un seul des deux et si oui lequel
+        return self.__id_user == other.__id_user and self.jeton == other.__jeton
 
     def __repr__(self):
         return f"Token(user_id={self.__id_user}, jeton='{self.__jeton}',expiration={self.__date_expiration})"

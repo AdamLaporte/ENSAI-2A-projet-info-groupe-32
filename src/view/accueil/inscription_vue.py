@@ -11,7 +11,7 @@ import json     # AJOUT
 from view.vue_abstraite import VueAbstraite
 
 # AJOUT : Définir l'URL de l'API
-API_BASE_URL = os.getenv("BASE_API_URL", "http://127.0.0.1:5000")
+API_BASE_URL = os.getenv("BASE_URL", "http://127.0.0.1:5000")
 
 
 class InscriptionVue(VueAbstraite):

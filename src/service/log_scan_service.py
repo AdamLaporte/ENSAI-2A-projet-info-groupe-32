@@ -1,11 +1,8 @@
-# src/service/log_scan_service.py
 from utils.log_decorator import log
 from business_object.log_scan import LogScan
 from dao.log_scan_dao import LogScanDao
 from typing import Optional
 import logging
-
-
 
 
 class LogScanService:
@@ -16,16 +13,16 @@ class LogScanService:
 
     @log
     def enregistrer_log(
-    self,
-    id_qrcode: int,
-    client_host: Optional[str] = None,
-    user_agent: Optional[str] = None,
-    referer: Optional[str] = None,
-    accept_language: Optional[str] = None,
-    geo_country: Optional[str] = None,
-    geo_region: Optional[str] = None,
-    geo_city: Optional[str] = None
-) -> Optional[LogScan]:
+        self,
+        id_qrcode: int,
+        client_host: Optional[str] = None,
+        user_agent: Optional[str] = None,
+        referer: Optional[str] = None,
+        accept_language: Optional[str] = None,
+        geo_country: Optional[str] = None,
+        geo_region: Optional[str] = None,
+        geo_city: Optional[str] = None,
+    ) -> Optional[LogScan]:
         """
         Enregistre un log de scan pour un QR code.
 
@@ -69,13 +66,13 @@ class LogScanService:
                 accept_language=accept_language,
                 geo_country=geo_country,
                 geo_region=geo_region,
-                geo_city=geo_city
+                geo_city=geo_city,
             )
-            
+
             success = self.dao.creer_log(log_scan)
-            
+
             return log_scan if success else None
-            
+
         except Exception as e:
             logging.exception(f"Erreur dans LogScanService : {e}")
             return None

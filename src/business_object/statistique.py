@@ -1,5 +1,6 @@
 from datetime import date, datetime
 
+
 class Statistique:
     """
     Classe représentant les Statistiques.
@@ -22,25 +23,23 @@ class Statistique:
         if id_qrcode is not None and not isinstance(id_qrcode, int):
             raise ValueError("L'identifiant du qrcode doit être un entier")
         if id_stat is not None and not isinstance(id_stat, int):
-            raise ValueError("L'identifiant de la statistique doit être un entier")
+            raise ValueError(
+                "L'identifiant de la statistique doit être un entier")
         if nombre_vue is not None and not isinstance(nombre_vue, int):
             raise ValueError("Le nombre de vues doit être entier")
         if date_des_vues is not None:
             if not isinstance(date_des_vues, list):
-                raise ValueError("Les dates doivent être stockées dans une liste")
+                raise ValueError(
+                    "Les dates doivent être stockées dans une liste")
             for elt in date_des_vues:
                 if not isinstance(elt, (date, datetime)):
-                    raise ValueError("La liste doit contenir des objets date ou datetime")
+                    raise ValueError(
+                        "La liste doit contenir des objets date ou datetime")
 
-        # --- Attributs privés ---
         self.__id_qrcode = id_qrcode
         self.__id_stat = id_stat
         self.__nombre_vue = nombre_vue
         self.__date_des_vues = date_des_vues
-
-    # ----------------------------
-    # Getters / Setters
-    # ----------------------------
 
     @property
     def id_qrcode(self):
@@ -59,7 +58,8 @@ class Statistique:
     @id_stat.setter
     def id_stat(self, value):
         if value is not None and not isinstance(value, int):
-            raise ValueError("L'identifiant de la statistique doit être entier")
+            raise ValueError(
+                "L'identifiant de la statistique doit être entier")
         self.__id_stat = value
 
     @property
@@ -79,17 +79,15 @@ class Statistique:
     @date_des_vues.setter
     def date_des_vues(self, value):
         if value is not None and not isinstance(value, list):
-            raise ValueError("Les dates des vues doivent être stockées dans une liste")
+            raise ValueError(
+                "Les dates des vues doivent être stockées dans une liste")
 
         for d in value:
             if not isinstance(d, (date, datetime)):
-                raise ValueError("Chaque élément doit être un objet date ou datetime")
+                raise ValueError(
+                    "Chaque élément doit être un objet date ou datetime")
 
         self.__date_des_vues = value
-
-    # ----------------------------
-    # Représentation et comparaison
-    # ----------------------------
 
     def __str__(self):
         """Affiche les informations principales de la statistique."""

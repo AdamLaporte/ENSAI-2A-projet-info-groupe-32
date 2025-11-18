@@ -1,8 +1,7 @@
 from utils.log_decorator import log
 from dao.token_dao import TokenDao
 from business_object.token import Token
-
-import logging 
+import logging
 from datetime import datetime, timedelta, timezone
 import secrets
 import string
@@ -13,33 +12,31 @@ class TokenService:
 
     @staticmethod
     def generer_jeton(longueur=32):
-        """ Génère un jeton d'authentification sécurisé.
-    
+        """Génère un jeton d'authentification sécurisé.
+
         Attributs:
         ----------
         longueur :int
             Longueur du jeton (par défaut 32 caractères)
-    
+
         Returns:
         --------
         str
             Jeton d'authentification aléatoire
         """
-        # Utilise secrets pour une génération cryptographiquement sécurisée
         caracteres = string.ascii_letters + string.digits
-        jeton = ''.join(secrets.choice(caracteres) for _ in range(longueur))
+        jeton = "".join(secrets.choice(caracteres) for _ in range(longueur))
         return jeton
-
 
     @log
     def creer_token(self, id_user) -> Token:
         """Création d'un nouveau token pour un utilisateur
-        
+
         Attributs
         ---------
         id_user : int
-            identifiant de l'utilisateur  
-        
+            identifiant de l'utilisateur
+
         Return
         ------
         Token
@@ -48,19 +45,18 @@ class TokenService:
         nouveau_token = Token(
             id_user=id_user,
             jeton=TokenService.generer_jeton(),
-            date_expiration = datetime.now(timezone.utc) + timedelta(hours=5) 
+            date_expiration=datetime.now(timezone.utc) + timedelta(hours=5),
         )
         return nouveau_token if TokenDao().creer_token(nouveau_token) else None
-
 
     @log
     def trouver_token_par_id(self, id_user) -> Token:
         """Trouver un token à partir de l'identifiant de l'utilisateur
-        
+
         Attributs
         ---------
         id_user : int
-            identifiant de l'utilisateur  
+            identifiant de l'utilisateur
 
         Return
         ------
@@ -69,11 +65,10 @@ class TokenService:
         """
         return TokenDao().trouver_token_par_id(id_user)
 
-
     @log
     def supprimer_token(self, token) -> bool:
         """Supprimer un token
-        
+
          Attributs
         ----------
         token : Token
@@ -85,7 +80,6 @@ class TokenService:
             True si la suppression a réussi
             False sinon"""
         return TokenDao().supprimer_token(token)
-
 
     @staticmethod
     @log
@@ -107,23 +101,22 @@ class TokenService:
         try:
             if token.date_expiration is None:
                 return False
-            
-            now = datetime.now(timezone.utc) 
+
+            now = datetime.now(timezone.utc)
             return token.date_expiration >= now
         except Exception as e:
             logging.info(f"Erreur lors de la vérification du token : {e}")
             return False
 
-
     @log
     def existe_token(self, jeton):
         """Vérifie si un token existe dans la base de données
-        
+
         Attributs
         ---------
         jeton : str
             Le jeton à vérifier
-        
+
         Returns
         -------
         bool
@@ -134,21 +127,19 @@ class TokenService:
     @log
     def trouver_par_jeton(self, jeton: str) -> Token | None:
         """
-            Recherche un token à partir de sa valeur textuelle.
+        Recherche un token à partir de sa valeur textuelle.
 
-            Paramètres
-            ----------
-            jeton : str
-                Chaîne de caractères représentant le jeton d’authentification
-                ou de session à retrouver.
+        Paramètres
+        ----------
+        jeton : str
+            Chaîne de caractères représentant le jeton d’authentification
+            ou de session à retrouver.
 
-            Retour
-            ------
-            Token | None
-                - Renvoie l’objet Token correspondant si le jeton existe en base.
-                - Renvoie None si aucun token ne correspond à la valeur fournie.
+        Retour
+        ------
+        Token | None
+            - Renvoie l’objet Token correspondant si le jeton existe en base.
+            - Renvoie None si aucun token ne correspond à la valeur fournie.
 
         """
-        # Le service délègue l'appel au DAO
         return TokenDao().trouver_token_par_jeton(jeton)
-

@@ -1,7 +1,6 @@
 from utils.log_decorator import log
-from business_object.statistique import Statistique
 from dao.statistique_dao import StatistiqueDao
-from datetime import date 
+from datetime import date
 from typing import Dict, Any
 from dao.log_scan_dao import LogScanDao
 
@@ -34,9 +33,10 @@ class StatistiqueService:
         """
         return StatistiqueDao().incrementer_vue_jour(id_qrcode, date_vue)
 
-
     @log
-    def get_statistiques_qr_code(self, id_qrcode: int, detail: bool = True) -> Dict[str, Any]:
+    def get_statistiques_qr_code(
+        self, id_qrcode: int, detail: bool = True
+    ) -> Dict[str, Any]:
         """
         Récupère l'ensemble des statistiques liées à un QR code.
 
@@ -66,35 +66,37 @@ class StatistiqueService:
         - StatistiqueDao.get_agregats : statistiques globales.
         - StatistiqueDao.get_stats_par_jour : vues journalières.
         - LogScanDao.get_scans_recents : informations issues des logs.
-        
+
         Les dates sont converties au format ISO 8601 pour assurer une compatibilité
         front-end et API.
         """
-        # 1. Récupérer les agrégats (depuis StatistiqueDao)
         stat_dao = StatistiqueDao()
         agg = stat_dao.get_agregats(id_qrcode)
-        
+
         if not agg:
             agg = {"total_vues": 0, "premiere_vue": None, "derniere_vue": None}
 
-        # 2. Construire le résultat de base
         result = {
             "id_qrcode": id_qrcode,
             "total_vues": int(agg.get("total_vues") or 0),
-            "premiere_vue": agg.get("premiere_vue").isoformat() if agg.get("premiere_vue") else None,
-            "derniere_vue": agg.get("derniere_vue").isoformat() if agg.get("derniere_vue") else None,
+            "premiere_vue": agg.get("premiere_vue").isoformat()
+            if agg.get("premiere_vue")
+            else None,
+            "derniere_vue": agg.get("derniere_vue").isoformat()
+            if agg.get("derniere_vue")
+            else None,
         }
 
-        # 3. Si 'detail' est demandé, récupérer les listes
         if detail:
-            # 3.1. Stats par jour (depuis StatistiqueDao)
             rows = stat_dao.get_stats_par_jour(id_qrcode)
             result["par_jour"] = [
-                {"date": r["date_des_vues"].isoformat(), "vues": int(r.get("nombre_vue", 0))}
+                {
+                    "date": r["date_des_vues"].isoformat(),
+                    "vues": int(r.get("nombre_vue", 0)),
+                }
                 for r in rows
             ]
 
-            # 3.2. Scans récents (depuis LogScanDao)
             log_dao = LogScanDao()
             logs = log_dao.get_scans_recents(id_qrcode)
             result["scans_recents"] = [
@@ -106,9 +108,9 @@ class StatistiqueService:
                     "language": log["accept_language"],
                     "geo_country": log["geo_country"],
                     "geo_region": log["geo_region"],
-                    "geo_city": log["geo_city"]
+                    "geo_city": log["geo_city"],
                 }
                 for log in logs
             ]
-            
+
         return result

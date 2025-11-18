@@ -6,7 +6,7 @@ from dao.utilisateur_dao import UtilisateurDao
 
 class UtilisateurService:
     """Classe contenant les méthodes de service des Utilisateurs
-       Nouveau contrat: id_user = int (PK), nom_user = str (login)
+    Nouveau contrat: id_user = int (PK), nom_user = str (login)
     """
 
     @log
@@ -40,7 +40,6 @@ class UtilisateurService:
         )
         return nouveau if UtilisateurDao().creer_user(nouveau) else None
 
-
     @log
     def lister_tous(self, inclure_mdp: bool = False) -> list[Utilisateur]:
         """
@@ -68,7 +67,6 @@ class UtilisateurService:
                 u.mdp = None
         return utilisateurs
 
-
     @log
     def trouver_par_id_user(self, id_user: int) -> Utilisateur | None:
         """
@@ -91,7 +89,6 @@ class UtilisateurService:
         """
         return UtilisateurDao().trouver_par_id_user(id_user)
 
-
     @log
     def trouver_par_nom_user(self, nom_user: str) -> Utilisateur | None:
         """
@@ -112,7 +109,6 @@ class UtilisateurService:
         Méthode utile pour les mécanismes d’authentification.
         """
         return UtilisateurDao().trouver_par_nom_user(nom_user)
-
 
     @log
     def modifier_user(self, utilisateur: Utilisateur) -> Utilisateur | None:
@@ -140,7 +136,6 @@ class UtilisateurService:
             utilisateur.mdp = hash_password(utilisateur.mdp, utilisateur.nom_user)
         return utilisateur if UtilisateurDao().modifier_user(utilisateur) else None
 
-
     @log
     def supprimer(self, utilisateur: Utilisateur) -> bool:
         """
@@ -163,7 +158,6 @@ class UtilisateurService:
         L’opération est effectuée par UtilisateurDao().
         """
         return UtilisateurDao().supprimer(utilisateur)
-
 
     @log
     def se_connecter(self, nom_user: str, mdp: str) -> Utilisateur | None:
@@ -189,7 +183,6 @@ class UtilisateurService:
         au hash stocké en base.
         """
         return UtilisateurDao().se_connecter(nom_user, hash_password(mdp, nom_user))
-
 
     @log
     def nom_user_deja_utilise(self, nom_user: str) -> bool:

@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
+
 class LogScan:
     """
     Classe métier représentant un enregistrement de scan (log).
@@ -21,7 +22,6 @@ class LogScan:
         if not isinstance(id_qrcode, int):
             raise ValueError("id_qrcode doit être un entier.")
 
-        # --- Attributs privés ---
         self.__id_qrcode = id_qrcode
         self.__client_host = client_host
         self.__user_agent = user_agent
@@ -32,8 +32,6 @@ class LogScan:
         self.__geo_city = geo_city
         self.__id_scan = id_scan
         self.__date_scan = date_scan
-
-    # --- Propriétés (Getters/Setters) ---
 
     @property
     def id_scan(self) -> Optional[int]:

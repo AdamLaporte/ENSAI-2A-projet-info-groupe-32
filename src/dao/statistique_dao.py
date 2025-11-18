@@ -2,10 +2,9 @@ import logging
 
 from utils.singleton import Singleton
 from utils.log_decorator import log
-from datetime import date, datetime
+from datetime import date
 from dao.db_connection import DBConnection
 from typing import List, Dict, Any, Optional
-from business_object.statistique import Statistique
 
 
 class StatistiqueDao(metaclass=Singleton):
@@ -42,8 +41,6 @@ class StatistiqueDao(metaclass=Singleton):
                         """,
                         (id_qrcode, date_vue),
                     )
-                    # rowcount n'est pas fiable pour ON CONFLICT, 
-                    # mais on suppose que l'opération réussit si pas d'exception.
                     return True
         except Exception as e:
             logging.exception(f"Erreur lors de l'incrémentation de la vue : {e}")
@@ -86,7 +83,6 @@ class StatistiqueDao(metaclass=Singleton):
                         """,
                         (id_qrcode,),
                     )
-                    # Retourne le dictionnaire de résultats (ou None)
                     return cur.fetchone()
         except Exception as e:
             logging.exception(f"Erreur DAO en récupérant les agrégats stats : {e}")

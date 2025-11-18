@@ -35,18 +35,13 @@ class Qrcode:
         couleur: Optional[str] = None,
         logo: Optional[str] = None,
     ):
-        # Attributs privés
         self.__id_qrcode = id_qrcode
         self.__id_proprietaire = id_proprietaire
         self.__date_creation = date_creation or datetime.now(timezone.utc)
-
-        # Mise à None avant appel setter
         self.__url = None
         self.__type_qrcode = None
         self.__couleur = None
         self.__logo = None
-
-        # Application des validations via setters
         self.url = url
         self.type_qrcode = type_qrcode
 
@@ -54,10 +49,6 @@ class Qrcode:
             self.couleur = couleur
         if logo is not None:
             self.logo = logo
-
-    # ------------------------
-    # GETTERS / SETTERS
-    # ------------------------
 
     @property
     def id_qrcode(self) -> Optional[int]:
@@ -119,14 +110,10 @@ class Qrcode:
         return self.__logo
 
     @logo.setter
-    def logo(self, l: str) -> None:
-        if not isinstance(l, str):
+    def logo(self, logo: str) -> None:
+        if not isinstance(logo, str):
             raise TypeError("Le logo doit être une chaîne (chemin/nom).")
-        self.__logo = l
-
-    # ------------------------
-    # UTILITAIRES
-    # ------------------------
+        self.__logo = logo
 
     def to_dict(self) -> dict:
         return {

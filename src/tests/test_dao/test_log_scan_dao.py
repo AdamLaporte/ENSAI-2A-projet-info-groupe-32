@@ -1,13 +1,10 @@
 import os
 import pytest
 from unittest.mock import patch
-from datetime import datetime
-
-
-# Importations nécessaires
 from utils.reset_database import ResetDatabase
 from dao.log_scan_dao import LogScanDao
 from business_object.log_scan import LogScan
+
 
 #
 # SETUP DE TEST (Identique à vos autres tests DAO)
@@ -22,9 +19,11 @@ def setup_test_environment():
         ResetDatabase().lancer(test_dao=True)
     yield
 
+
 #
 # TESTS DAO (sur la BDD de test)
 #
+
 
 def test_creer_log_ok():
     """
@@ -47,14 +46,14 @@ def test_creer_log_ok():
     Le test utilise un id_qrcode existant dans la base de tests (id_qrcode = 2).
     """
     dao = LogScanDao()
-    
+
     log_scan = LogScan(
         id_qrcode=2,
         client_host="1.1.1.1",
         user_agent="TestAgent-DAO",
-        geo_city="TestVille"
+        geo_city="TestVille",
     )
-    
+
     success = dao.creer_log(log_scan)
     assert success is True
     assert log_scan.id_scan is not None
@@ -62,7 +61,7 @@ def test_creer_log_ok():
 
     logs_recents = dao.get_scans_recents(id_qrcode=2)
     assert len(logs_recents) == 1
-    assert logs_recents[0]['client_host'] == "1.1.1.1"
+    assert logs_recents[0]["client_host"] == "1.1.1.1"
 
 
 def test_creer_log_echec_fk():
@@ -86,12 +85,9 @@ def test_creer_log_echec_fk():
     que le DAO doit gérer sans lever d’exception.
     """
     dao = LogScanDao()
-    
-    log_scan = LogScan(
-        id_qrcode=99999,
-        client_host="2.2.2.2"
-    )
-    
+
+    log_scan = LogScan(id_qrcode=99999, client_host="2.2.2.2")
+
     success = dao.creer_log(log_scan)
     assert success is False
     assert log_scan.id_scan is None
@@ -118,15 +114,15 @@ def test_get_scans_recents_ok_avec_data_init():
     Les données proviennent du fichier pop_db_test.sql.
     """
     dao = LogScanDao()
-    
+
     logs = dao.get_scans_recents(id_qrcode=1)
-    
+
     assert isinstance(logs, list)
     assert len(logs) == 2
-    assert logs[0]['client_host'] == '10.0.0.5'
-    assert logs[0]['geo_city'] == 'Mountain View'
-    assert logs[1]['client_host'] == '192.168.1.10'
-    assert logs[1]['geo_city'] == 'Rennes'
+    assert logs[0]["client_host"] == "10.0.0.5"
+    assert logs[0]["geo_city"] == "Mountain View"
+    assert logs[1]["client_host"] == "192.168.1.10"
+    assert logs[1]["geo_city"] == "Rennes"
 
 
 def test_get_scans_recents_avec_limit():
@@ -149,12 +145,12 @@ def test_get_scans_recents_avec_limit():
     Le QR code id=1 possède deux logs dans la base de tests.
     """
     dao = LogScanDao()
-    
+
     logs = dao.get_scans_recents(id_qrcode=1, limit=1)
-    
+
     assert isinstance(logs, list)
     assert len(logs) == 1
-    assert logs[0]['client_host'] == '10.0.0.5'
+    assert logs[0]["client_host"] == "10.0.0.5"
 
 
 def test_get_scans_recents_sans_resultat():
@@ -176,7 +172,7 @@ def test_get_scans_recents_sans_resultat():
     """
     dao = LogScanDao()
     logs = dao.get_scans_recents(id_qrcode=2)
-    
+
     assert isinstance(logs, list)
     assert len(logs) == 0
 
@@ -200,7 +196,7 @@ def test_get_scans_recents_id_inexistant():
     """
     dao = LogScanDao()
     logs = dao.get_scans_recents(id_qrcode=999)
-    
+
     assert isinstance(logs, list)
     assert len(logs) == 0
 
