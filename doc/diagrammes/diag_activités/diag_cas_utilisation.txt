@@ -4,33 +4,61 @@
 
 ' lien pour obtenir le diag déjà compilé : https://www.plantuml.com/plantuml/png/VP9DZXCn48NtFaMfDxEQD3z8ID4e6ZI0X08BYDYmGPQxabJajfjorMGGuYviESTS33izaMn-i9Ie_Vm-rwlglavYMNJqvWBkVu2BtYC3EO8fAiCj9RMUKjQMi1UPqhBlZyVZOl8s56pXujYVDttvRRvkNwyFJtWjJs_YEhnw--7nc_ZiqykuiSyVvPKB3T5LrpLNRRdNX9VEvh-1x8xjQ8pnk1MG24oxlS10Z4ue1cEiayZGVHJobAoWSWUdPHDeGlwB0V1Ea0DsislU6LEkj67d4RuPA6o90DqDt_z41WtmdbqS2dKkyA3ypmr9wPQwoltvf3HC34czPCnRI6A5aj0NHHZqNBF6iw6cDyw6WE2npLSJsT4G5rPbZq5eIpYFwqoyo0TDj7saEt1HFIhtFkvY7MMYSQhTxoXX-OOEKHa6_AsTcXpjmPZlncIKuV9ozQ1N-sfMbLgDmCplhUXDepLP3fkmy_CVSWij5glJ8609LrSKd5TPhKnL-nyEKyKebghPrdYDOT3H_m80
 
-
 left to right direction
+skinparam packageStyle rectangle
 
-actor "Utilisateur"      as user
-actor "Utilisateur externe"   as extern
+actor "Utilisateur Inscrit" as User
+actor "Utilisateur Externe" as Public
 
-rectangle {
-  usecase "Créer un Qrcode"        as Qrcode
-  usecase "Créer un Qrcode suivi"  as Qrcode_suivi
-  usecase "Consulter la statistique du Qrcode" as Qrcode_stat
-  usecase "Scanne le Qrcode"       as Qrcode_scan
-  usecase "S'authentifier"         as Auth
-  usecase "Choix couleur/logo" as Qrcode_pimp
-  usecase "Mise à jour de la statistique" as Qrcode_maj
+rectangle "Système QR Code Tracking" {
 
+  ' --- Authentification ---
+  usecase "S'inscrire / Se connecter" as Auth
+
+  ' --- Gestion des QR Codes ---
+  usecase "Créer un QR Code" as Create
+  usecase "Modifier un QR Code" as Update
+  usecase "Supprimer un QR Code" as Delete
+  usecase "Lister mes QR Codes" as List
+
+  ' --- Fonctionnalités spécifiques ---
+  usecase "Personnaliser (Couleur/Logo)" as Pimp
+  usecase "Définir le type (Suivi/Non-suivi)" as TypeChoice
+
+  ' --- Statistiques ---
+  usecase "Consulter les statistiques" as Stats
+
+  ' --- Action Publique ---
+  usecase "Scanner le QR Code" as Scan
+  usecase "Redirection & Log automatique" as AutoLog
 }
 
-user --> Qrcode
-user --> Qrcode_suivi
-user --> Qrcode_stat
+' Relations Acteur -> Cas d'utilisation
+User --> Create
+User --> Update
+User --> Delete
+User --> List
+User --> Stats
 
-extern --> Qrcode_scan
-Qrcode_suivi --> Qrcode_pimp
-Qrcode --> Qrcode_pimp
+Public --> Scan
 
-Qrcode_suivi ..> Auth : <<inclut>>
-Qrcode_stat ..> Auth : <<inclut>>
+' Relations entre Cas d'utilisation (Include / Extend)
 
-Qrcode_scan ..> Qrcode_maj : <<inclut>>
+' Pour tout faire, il faut être connecté
+Create ..> Auth : <<include>>
+Update ..> Auth : <<include>>
+Delete ..> Auth : <<include>>
+List ..> Auth : <<include>>
+Stats ..> Auth : <<include>>
+
+' La personnalisation étend la création et la modification
+Pimp .> Create : <<extend>>
+Pimp .> Update : <<extend>>
+
+' Le choix du type se fait à la création
+TypeChoice .> Create : <<include>>
+
+' Le scan déclenche automatiquement le log (c'est le système qui le fait)
+Scan ..> AutoLog : <<include>>
+
 @enduml
