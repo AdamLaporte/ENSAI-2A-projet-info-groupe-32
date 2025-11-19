@@ -21,7 +21,8 @@ from dao.token_dao import TokenDao
 
 
 # Logging de base
-logging.basicConfig(level=logging.INFO, format="%(asctime=s) - %(levelname)s - %(message)s")
+# BON
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # --- Initialisation de l'application ---

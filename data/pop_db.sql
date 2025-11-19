@@ -1,9 +1,28 @@
+-------------------------------------------------------------------
+-- NOM: pop_db.sql
+-- TYPE: Script de Peuplement (Data Population)
+-- SCHÉMA CIBLE: projet
+--
+-- DESCRIPTION: Peuple la base de données de démonstration/développement 
+--              (`projet`) avec un jeu de données complet (utilisateurs, 
+--              tokens, QR codes, statistiques, logs) pour les tests 
+--              fonctionnels et les démos.
+--
+-- PARAMÈTRES (Entrée): AUCUN (utilise des valeurs codées en dur)
+--
+-- SORTIE (Effet): 
+--  - TRUNCATE : Réinitialise et vide toutes les tables liées (CASCADE).
+--  - INSERT : Insère des utilisateurs, 3 tokens, 6 QR codes, 14 entrées statistiques, et 3 logs de scan.
+-------------------------------------------------------------------
 -- pop_db.sql (utilisateurs: raphael, adam, ilona; sites connus; couleur 'black'; pas de logo)
 SET search_path TO projet;
 
 BEGIN;
 
--- Nettoyage optionnel (si tu veux repartir propre)
+-------------------------------------------------------------------
+-- ÉTAPE 1: NETTOYAGE ET RÉINITIALISATION
+-- Action: Vide toutes les tables et réinitialise leurs compteurs SERIAL (IDs).
+-------------------------------------------------------------------
 TRUNCATE TABLE logs_scan RESTART IDENTITY CASCADE;
 TRUNCATE TABLE statistique RESTART IDENTITY CASCADE;
 TRUNCATE TABLE qrcode RESTART IDENTITY CASCADE;
@@ -16,7 +35,11 @@ INSERT INTO utilisateur (nom_user, mdp) VALUES
   ('adam',    'pwdadam'),
   ('ilona',   'pwdilona');
 
--- Jetons (si utilisé)
+-------------------------------------------------------------------
+-- ÉTAPE 2: INSERTION DES JETONS D'AUTHENTIFICATION
+-- Description: 1 token est créé pour chaque utilisateur.
+-- Tables affectées: token
+-------------------------------------------------------------------
 INSERT INTO token (id_user, jeton)
 SELECT u.id_user, t.jeton
 FROM (VALUES
@@ -26,23 +49,32 @@ FROM (VALUES
 ) AS t(nom_user, jeton)
 JOIN utilisateur u ON u.nom_user = t.nom_user;
 
--- QR codes (nombre différent par utilisateur, couleur 'black', logo NULL)
+-------------------------------------------------------------------
+-- ÉTAPE 3: INSERTION DES QR CODES
+-- Description: 6 QR codes sont insérés, incluant un QR code non-suivi (FALSE)
+--              pour 'adam' (`https://www.ensae.fr/`).
+-- Tables affectées: qrcode
+-------------------------------------------------------------------
 INSERT INTO qrcode (url, id_proprietaire, type_qrcode, couleur, logo)
 SELECT q.url, u.id_user, q.type_qrcode, q.couleur, NULL::text
 FROM (VALUES
-  -- raphael (3)
+  -- raphael (3 QR codes suivis)
   ('https://ensai.fr',                   'raphael', TRUE,  'black'),
   ('https://www.youtube.com/',           'raphael', TRUE,  'black'),
   ('https://fr.wikipedia.org/wiki/ENSAI',  'raphael', TRUE,  'black'),
-  -- adam (2)
+  -- adam (1 suivi, 1 non-suivi)
   ('https://github.com/',                  'adam',    TRUE,  'black'),
-  ('https://www.ensae.fr/',                'adam',    FALSE, 'black'), -- QR non-suivi
-  -- ilona (1)
+  ('https://www.ensae.fr/',                'adam',    FALSE, 'black'),
+  -- ilona (1 suivi)
   ('https://www.insee.fr/fr/accueil',      'ilona',   TRUE,  'black')
 ) AS q(url, nom_user, type_qrcode, couleur)
 JOIN utilisateur u ON u.nom_user = q.nom_user;
 
--- Statistiques journalières variées (dates d'exemple)
+-------------------------------------------------------------------
+-- ÉTAPE 4: INSERTION DES STATISTIQUES AGRÉGÉES (PAR JOUR)
+-- Description: Ajoute 14 entrées de vues agrégées (nombre_vue) sur plusieurs jours.
+-- Tables affectées: statistique
+-------------------------------------------------------------------
 WITH urls AS (SELECT id_qrcode, url FROM qrcode)
 INSERT INTO statistique (id_qrcode, nombre_vue, date_des_vues)
 SELECT u.id_qrcode, s.nombre_vue, s.date_des_vues
@@ -56,7 +88,7 @@ FROM (VALUES
   ('https://www.youtube.com/',           DATE '2025-10-05', 31),
   ('https://fr.wikipedia.org/wiki/ENSAI',  DATE '2025-10-02',  8),
   ('https://fr.wikipedia.org/wiki/ENSAI',  DATE '2025-10-04', 15),
-  -- adam: GitHub, ENSAE
+  -- adam: GitHub, ENSAE (les stats ENSAE sont insérées, mais ignorées par l'agrégation car non-suivi)
   ('https://github.com/',                  DATE '2025-10-01', 12),
   ('https://github.com/',                  DATE '2025-10-02', 16),
   ('https://github.com/',                  DATE '2025-10-04',  7),
@@ -67,7 +99,11 @@ FROM (VALUES
 ) AS s(url, date_des_vues, nombre_vue)
 JOIN urls u ON u.url = s.url;
 
--- AJOUTÉ : Exemples de logs de scans (avec heure ET NOUVELLES COLONNES GÉO)
+-------------------------------------------------------------------
+-- ÉTAPE 5: INSERTION DES LOGS DE SCANS DÉTAILLÉS
+-- Description: Ajoute 3 entrées détaillées à la table logs_scan (avec Géo/IP/UA).
+-- Tables affectées: logs_scan
+-------------------------------------------------------------------
 WITH urls AS (SELECT id_qrcode, url FROM qrcode)
 INSERT INTO logs_scan (id_qrcode, client_host, user_agent, date_scan, referer, accept_language, geo_country, geo_region, geo_city)
 SELECT u.id_qrcode, l.client_host, l.user_agent, l.date_scan, l.referer, l.lang, l.geo_country, l.geo_region, l.geo_city
