@@ -1,3 +1,9 @@
+Voici une mise à jour de votre fichier `README.md`.
+
+J'ai enrichi la section **"How to Run"** pour détailler le lancement du `main.py` (CLI) et décrire les fonctionnalités disponibles (Réinitialisation BDD, Authentification, Gestion des QR Codes et Statistiques).
+
+J'ai conservé le fichier en anglais pour correspondre à la version actuelle, mais j'ai ajouté les détails demandés.
+
 ````markdown
 # QR Code Tracking Project - Group 32
 
@@ -26,34 +32,52 @@ POSTGRES_SCHEMA=projet
 
 # API Configuration
 PORT=5000
-BASE_URL= "link that give you onyxia for the port: ex : https://user-id2774-358651-user.user.lab.sspcloud.fr"
-SCAN_BASE_URL="same link but with /scan at the end : ex : https://user-id2774-358651-user.user.lab.sspcloud.fr/scan"
+BASE_URL="link that give you onyxia for the port: ex : [https://user-id2774-358651-user.user.lab.sspcloud.fr](https://user-id2774-358651-user.user.lab.sspcloud.fr)"
+SCAN_BASE_URL="same link but with /scan at the end : ex : [https://user-id2774-358651-user.user.lab.sspcloud.fr/scan](https://user-id2774-358651-user.user.lab.sspcloud.fr/scan)"
 QRCODE_OUTPUT_DIR=static/qrcodes
 ```
 
 ## How to Run
 
-### 1\. Reset Database & CLI
+### 1\. Command-Line Interface (CLI)
 
-To initialize the database tables or use the command-line interface:
+The application provides a terminal-based interface (CLI) to interact with the system, manage the database, and handle QR codes.
+
+To launch the CLI:
 
 ```bash
 python src/main.py
 ```
 
-> **Important:** On the first run, select **"Ré-initialiser la base de données"** in the menu to create the schema and populate initial data.
+**Key Features available in the CLI:**
+
+  * **Database Initialization:**
+
+      * Select **"Ré-initialiser la base de données"** on the first run. This will create the schema, tables, and populate the database with demo data (users, tokens, sample QR codes).
+
+  * **Authentication:**
+
+      * **"Créer un compte"**: Register a new user (calls the API).
+      * **"Se connecter"**: Log in to access private features.
+
+  * **User Menu (Once logged in):**
+
+      * **Create QR Codes**: Generate new QR codes. You can choose between **Static** (direct link) or **Tracked** (dynamic link with stats), and customize the color or add a logo.
+      * **My QR Codes**: List all QR codes associated with your account.
+      * **Statistics**: For tracked QR codes, view detailed analytics including total views, dates, and recent scan logs (Device, IP, Location).
+      * **Management**: Modify destination URLs or delete existing QR codes.
 
 ### 2\. Launch the API Server
 
-To start the backend webservice:
+To start the backend webservice (required for the CLI to work properly for auth and tracking):
 
 ```bash
 python src/app.py
 ```
 
-The server will start on the BASE_URL in the .env ex: `https://user-id2774-358651-user.user.lab.sspcloud.fr` .
+The server will start on the BASE\_URL defined in your `.env`.
 
-  - **Interactive Docs:** ex: `https://user-id2774-358651-user.user.lab.sspcloud.fr/doc`.
+  * **Interactive Docs:** `[BASE_URL]/docs` (e.g., `https://.../docs`).
 
 ## Testing
 
@@ -66,3 +90,6 @@ pytest
 ## Team
 
 Adam LAPORTE, Ahmed BEIJI, Lesline Méralda KENNE YONTA, Maytena LABINSKY, Louis ROUX.
+
+```
+```
