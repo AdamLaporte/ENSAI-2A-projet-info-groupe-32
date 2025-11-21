@@ -51,9 +51,9 @@ To start the backend webservice:
 python src/app.py
 ```
 
-The server will start on `https://user-id2774-358651-user.user.lab.sspcloud.fr`.
+The server will start on the BASE_URL in the .env ex: `https://user-id2774-358651-user.user.lab.sspcloud.fr` .
 
-  - **Interactive Docs:** `https://user-id2774-358651-user.user.lab.sspcloud.fr/doc`.
+  - **Interactive Docs:** ex: `https://user-id2774-358651-user.user.lab.sspcloud.fr/doc`.
 
 ## Testing
 
@@ -66,6 +66,3 @@ pytest
 ## Team
 
 Adam LAPORTE, Ahmed BEIJI, Lesline Méralda KENNE YONTA, Maytena LABINSKY, Louis ROUX.
-
-```
-```
