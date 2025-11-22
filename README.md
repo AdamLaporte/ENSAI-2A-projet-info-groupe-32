@@ -1,9 +1,3 @@
-Voici une mise à jour de votre fichier `README.md`.
-
-J'ai enrichi la section **"How to Run"** pour détailler le lancement du `main.py` (CLI) et décrire les fonctionnalités disponibles (Réinitialisation BDD, Authentification, Gestion des QR Codes et Statistiques).
-
-J'ai conservé le fichier en anglais pour correspondre à la version actuelle, mais j'ai ajouté les détails demandés.
-
 ````markdown
 # QR Code Tracking Project - Group 32
 
@@ -90,6 +84,3 @@ pytest
 ## Team
 
 Adam LAPORTE, Ahmed BEIJI, Lesline Méralda KENNE YONTA, Maytena LABINSKY, Louis ROUX.
-
-```
-```
