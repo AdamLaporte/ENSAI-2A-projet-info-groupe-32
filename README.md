@@ -1,4 +1,4 @@
-````markdown
+
 # QR Code Tracking Project - Group 32
 
 A comprehensive application for generating, managing, and tracking QR codes using Python (FastAPI) and PostgreSQL.
